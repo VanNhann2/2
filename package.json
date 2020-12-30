@@ -1,0 +1,36 @@
+{
+  "name": "apiviolations",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "nodemon --exec babel-node src/index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@babel/cli": "^7.1.5",
+    "@babel/core": "^7.1.6",
+    "@babel/node": "^7.0.0",
+    "@babel/plugin-proposal-class-properties": "^7.12.1",
+    "@babel/plugin-transform-runtime": "^7.12.10",
+    "@babel/preset-env": "^7.1.6",
+    "@babel/preset-react": "^7.12.10",
+    "eslint-config-prettier": "^6.10.1"
+  },
+  "dependencies": {
+    "await-to-js": "^2.1.1",
+    "babel-plugin-module-resolver": "^4.1.0",
+    "chalk": "^4.1.0",
+    "cookie-parser": "^1.4.5",
+    "cors": "^2.8.5",
+    "dotenv": "^8.2.0",
+    "express": "^4.17.1",
+    "http-status-codes": "^2.1.4",
+    "lodash": "^4.17.20",
+    "mongodb": "^3.6.3",
+    "mongoose": "^5.11.9",
+    "uuid": "^8.3.2"
+  }
+}
