@@ -1,5 +1,5 @@
 import to from 'await-to-js'
-import * as StatusCodes from 'http-status-codes'
+import StatusCodes from 'http-status-codes'
 import { model } from '../models'
 import { AppError, logger } from '../utils'
 import mongoose from 'mongoose'
@@ -8,16 +8,16 @@ export class Violation {
   constructor() { }
 
   /** Get all violations */
-  getAll = async (object, status, plate, startSearch, endSearch) => {
+  getAll = async (object, status, plate, startDay, endDay, page) => {
     try {
       const vehicle = object === 'loai1' ? 0 : 1
       const boolStatus = status === 'enabled' ? 1 : ('disabled' ? 0 : 2)
-      const isObject = object ? vehicle : []
-      const isStatus = status ? boolStatus : []
-      const isPlate = plate ? plate : []
-      const startDay = startSearch ? startSearch : ""
-      const endDay = endSearch ? endSearch : ""
-      let [err, result] = await to(model.violation.getAll(isObject, isStatus, isPlate, startDay, endDay))
+      const objectS = object ? vehicle : []
+      const statusS = status ? boolStatus : []
+      const plateS = plate ? plate : []
+      const sDay = startDay ? (new Date(startDay).toISOString()) : ""
+      const eDay = endDay ? (new Date(endDay).toISOString()) : ""
+      let [err, result] = await to(model.violation.getAll(objectS, statusS, plateS, sDay, eDay, page))
       if (err) throw err
       return result
     } catch (error) {
@@ -48,7 +48,7 @@ export class Violation {
 
       return result
     } catch (error) {
-      logger.error('Violations.getById() error:', error)
+      logger.error('Violations.changeApproved() error:', error)
       throw new AppError({ code: StatusCodes.INTERNAL_SERVER_ERROR, message: 'Thay đổi thông tin vi phạm thất bại' })
     }
   }
@@ -60,12 +60,35 @@ export class Violation {
 
       return result
     } catch (error) {
-      logger.error('Violations.getById() error:', error)
+      logger.error('Violations.editViolation() error:', error)
       throw new AppError({ code: StatusCodes.INTERNAL_SERVER_ERROR, message: 'Thay đổi thông tin vi phạm thất bại' })
     }
   }
 
+  pagination = async (page) => {
+    try {
+      let [err, result] = await to(model.violation.pagination(page))
+      if (err) throw err
 
+      return result
+    } catch (error) {
+      logger.error('Violations.pagination() error:', error)
+      throw new AppError({ code: StatusCodes.INTERNAL_SERVER_ERROR, message: 'Phân trang vi phạm thất bại' })
+    }
+  }
+
+
+  report = async (id, address, owner, res) => {
+    try {
+      const ownerReport = owner ? owner : ""
+      const addressOwnerReport = address ? address : ""
+      let [err, result] = await to(model.violation.report(id, addressOwnerReport, ownerReport, res))
+      if (err) throw err
+      return result
+    } catch (error) {
+
+    }
+  }
 
   /**
    * Delete violations

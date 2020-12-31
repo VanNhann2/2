@@ -18,5 +18,8 @@ export const violationsSchema = {
   object_images: [{ type: String }],
   plate_images: [{ type: String }],
   vio_time: { type: Date, required: true },
-  deleted: {type: Boolean}
+  ownew: { type: String, required: true },
+  phone: { type: Number },
+  email: { type: String },
+  deleted: { type: Boolean },
 }
