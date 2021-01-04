@@ -103,6 +103,8 @@ export const violationRouter = (router) => {
             }
             // res.setHeader()
             await app.violation.report(id, address, owner, res)
+            res.setHeader('Content-Type', 'application/pdf')
+            res.setHeader('X-Filename', violation.plate + '_' + '.pdf')
         } catch (error) {
             next(error)
         }

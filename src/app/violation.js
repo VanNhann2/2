@@ -174,8 +174,8 @@ export class Violation {
       console.log("Ds")
 
       doc.end()
-      res.setHeader('Content-Type', 'application/pdf')
-      res.setHeader('X-Filename', violation.plate + '_' + '.pdf')
+      // res.setHeader('Content-Type', 'application/pdf')
+      // res.setHeader('X-Filename', violation.plate + '_' + '.pdf')
       doc.pipe(res)
     } catch (error) {
 
