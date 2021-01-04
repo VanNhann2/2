@@ -1,6 +1,6 @@
 import mongoose from 'mongoose'
 import to from 'await-to-js'
-import _ from 'lodash'
+import _, { result } from 'lodash'
 import { violationsSchema, schemaOptions } from './define'
 import { BaseModel, BaseSchema } from './base'
 import moment from 'moment'
@@ -16,7 +16,7 @@ export class ViolationModel extends BaseModel {
 
   /** Get all province */
   getAll = async (objectS, statusS, plateS, sDay, eDay, page) => {
-    let perPage = 10
+    let perPage = 20
     let pag = page || 1
 
     const objectCondition = _.isEmpty(_.toString(objectS)) ? {} : { $or: [{ object: objectS }] }
@@ -31,8 +31,11 @@ export class ViolationModel extends BaseModel {
         _id: 0
       }
     }
-
-    let [err, result] = await to(this.model.aggregate([match, project, { "$limit": 20 }]))
+    const lookup = [
+      { $lookup: { from: 'cameras', localField: 'camera', foreignField: 'code', as: 'camera' } },
+    ]
+    //// tim cai thoi gian cuoi limit (tuc la cai thu 20) query theo id ,  bo cai time do cai $sort,  ==> lay tu 20 cai cuoi len  
+    let [err, result] = await to(this.model.aggregate([match, project, ...lookup, { $limit: perPage }, { $sort: { vio_time: -1 } }]))
     if (err) throw err
     return result
   }
@@ -46,12 +49,15 @@ export class ViolationModel extends BaseModel {
       $match: { $and: [otherCondition, idCondition] }
     }
 
+    const lookup = [
+      { $lookup: { from: 'cameras', localField: 'camera', foreignField: 'code', as: 'camera' } },
+    ]
     const project = {
       $project: {
         _id: 0
       },
     }
-    let [err, result] = await to(this.model.aggregate([match, { $addFields: { id: '$_id' } }, project]))
+    let [err, result] = await to(this.model.aggregate([match, ...lookup, { $addFields: { id: '$_id' } }, project]))
     if (err) throw err
 
     if (_.isEmpty(result)) return {}
@@ -132,107 +138,19 @@ export class ViolationModel extends BaseModel {
   //   // result.sor
   // }
 
-  report = async (id, addressOwnerReport, ownerReport, res) => {
-    let [err, violation] = await to(this.model.aggregate({ $match: { id: mongoose.Types.ObjectId(id) } }))
-    if (err) {
-      throw 'Đọc thông tin vi phạm thất bại'
-    }
-
-    if (_.isEmpty(violation)) {
-      throw 'Vi phạm không tồn tại'
-    }
-
-    const vio_daytime = moment(new Date(violation.vio_time)).format('DD/MM/YYYY HH:mm:ss')
-    const vio_day = vio_daytime.split(' ')[0]
-    const vio_time = vio_daytime.split(' ')[1]
-
-    let vio_objectType
-    switch (violation.object) {
-      case 0:
-        vio_objectType = 'Xe máy'
-        break
-      case 1:
-        vio_objectType = 'Ô tô'
-        break
-      case 2:
-        vio_objectType = 'Xe tải'
-        break
-      case 3:
-        vio_objectType = 'Xe khách'
-        break
-      case 4:
-        vio_objectType = 'Xe buýt'
-        break
-      default:
-        break
-    }
-
+  report = async (id, addressOwnerReport, ownerReport) => {
     if (_.isEmpty(ownerReport)) ownerReport = ' '
 
     if (_.isEmpty(addressOwnerReport)) addressOwnerReport = ' '
+    let [err, result] = await to(this.model.findOne({ _id: mongoose.Types.ObjectId(id) }))
+    if (err) {
+      throw new Error('Đọc thông tin vi phạm thất bại')
+    }
 
-    const doc = new PDFDocument({
-      size: 'A5',
-      layout: "portrait",
-    })
-    // const font_path = config.staticFolder + '/fonts'
-    // doc.registerFont('regular', font_path + '/times.ttf')
-    // doc.registerFont('italic', font_path + '/times_italic.ttf')
-    // doc.registerFont('bold', font_path + '/times_bold.ttf')
-    // doc.registerFont('bold_italic', font_path + '/times_bolditalic.ttf')
-
-    doc.fontSize(12)
-    doc.font('regular').text('SỞ GTVT THÀNH PHỐ ĐÀ NẴNG', 30, doc.y, { continued: true })
-    doc.font('bold').text('CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM', { align: 'right' })
-
-    doc.fontSize(13)
-    doc.font('bold').text('THANH TRA SỞ', 50, doc.y, { align: 'left', continued: true })
-      .underline(75, doc.y + 15, 145, 2)
-
-    doc
-      .font('bold')
-      .text('Độc lập - Tự do - Hạnh phúc', 0, doc.y, { align: 'right' })
-      .underline(360, doc.y, 110, 2)
-
-    doc.fontSize(11)
-    doc.font('regular')
-      .text('Số .........', 70, doc.y, { align: 'left' })
-
-    doc.moveDown(0.7)
-    doc.font('bold')
-      .text('THANH TRA SỞ GIAO THÔNG VẬN TẢI THÀNH PHỐ ĐÀ NẴNG', 130, doc.y)
-
-    doc.moveDown(0.3)
-    doc.font('bold').text('THÔNG BÁO', 258, doc.y)
-
-    doc.moveDown(0.2)
-    doc.text('Ông (bà) là chủ phương tiện (lái xe) BKS số: ' + violation.plate, 30, doc.y, { continued: true })
-      .moveDown(0.1)
-      .fontSize(12)
-      .moveDown(0.8)
-      .text('Đã vi phạm            :  Đỗ xe sai quy định ', 20, doc.y)
-      .moveDown(0.1)
-      .text('Thời gian         : ' + vio_time + 'giờ ' + vio_time + ', ngày' + vio_day + 'tháng' + vio_day + 'năm ' + (new Date().getFullYear()))
-      .moveDown(0.1)
-      .text('địa điểm      : ' + vio_time + ', thành phố Đà Nẵng.')
-      .moveDown(0.1)
-      .text('Yêu cầu chủ phương tiện (lái xe) đến Thanh tra Sở Giao Thông vận tải thành phố Đà Nẵng để giải quyết vi phạm theo quy định.')
-      .moveDown(0.1)
-      .text('Vào Lúc : ....... giờ ........, ngày ........... tháng .......... năm ' + (new Date().getFullYear()))
-      .moveDown(0.1)
-      .text('Địa điểm   :  ........................')
-      .moveDown(0.1)
-      .text('khi đi mang theo   :  Giấy phép lái xe và các giấy tờ xe.')
-      .moveDown(0.1)
-      .font('italic').text('(Ghi chú: Liên hệ Đội ........................ )')
-
-
-    doc.end()
-    // res.setHeader('Content-Disposition', 'inline')
-    res.setHeader('Content-Type', 'application/pdf')
-    res.setHeader('X-Filename', violation.plate + '_' + vio_day + '.pdf')
-
-    doc.pipe(res)
+    if (_.isEmpty(result)) {
+      throw new Error('Vi phạm không tồn tại')
+    }
+    return result
   }
 
   delete = async (id) => {

@@ -91,13 +91,17 @@ export const violationRouter = (router) => {
         }
     })
 
-    router.get('/violation/report', async (req, res, next) => {
+    router.get('/violation/:id/report', async (req, res, next) => {
         try {
-            const { id, address, owner } = req.query
+            const { id } = req.params
+            const { address, owner } = req.query
+
+            console.log(id)
 
             if (!validator.isMongoId(id)) {
                 throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Vi phạm không hợp lệ' })
             }
+            // res.setHeader()
             await app.violation.report(id, address, owner, res)
         } catch (error) {
             next(error)

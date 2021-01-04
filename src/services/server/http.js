@@ -3,7 +3,7 @@ import http from 'http'
 import cookieParser from 'cookie-parser'
 // import compression from 'compression'
 import cors from 'cors'
-import * as StatusCodes from 'http-status-codes'
+import StatusCodes from 'http-status-codes'
 
 import { apis } from '../../api'
 import { config } from '../../configs'
