@@ -32,7 +32,11 @@ export class ViolationModel extends BaseModel {
       }
     }
 
-    let [err, result] = await to(this.model.aggregate([match, project, { "$limit": 20 }]))
+    const lookup = [
+      { $lookup: { from: 'cameras', localField: 'camera', foreignField: 'code', as: 'camera' } },
+    ]
+
+    let [err, result] = await to(this.model.aggregate([match, ...lookup, project, { "$limit": 20 }]))
     if (err) throw err
     return result
   }
@@ -45,13 +49,15 @@ export class ViolationModel extends BaseModel {
       // {age: { $ne: 12} =>>>>>>>>>>>>>>> WHERE age != 12 
       $match: { $and: [otherCondition, idCondition] }
     }
-
+    const lookup = [
+      { $lookup: { from: 'cameras', localField: 'camera', foreignField: 'code', as: 'camera' } },
+    ]
     const project = {
       $project: {
         _id: 0
       },
     }
-    let [err, result] = await to(this.model.aggregate([match, { $addFields: { id: '$_id' } }, project]))
+    let [err, result] = await to(this.model.aggregate([match, ...lookup, { $addFields: { id: '$_id' } }, project]))
     if (err) throw err
 
     if (_.isEmpty(result)) return {}
@@ -142,9 +148,15 @@ export class ViolationModel extends BaseModel {
       throw 'Vi phạm không tồn tại'
     }
 
-    const vio_daytime = moment(new Date(violation.vio_time)).format('DD/MM/YYYY HH:mm:ss')
-    const vio_day = vio_daytime.split(' ')[0]
-    const vio_time = vio_daytime.split(' ')[1]
+    // const vio_daytime = moment(new Date(violation.vio_time)).format('DD/MM/YYYY HH:mm:ss')
+    // const vio_day = vio_daytime.split(' ')[0]
+    // const vio_time = vio_daytime.split(' ')[1]
+    const date = new Date(vio_time)
+    const vio_Hour = date.getHours()
+    const vio_Minutes = date.getMinutes()
+    const vio_Day = date.getDate()
+    const vio_Month = date.getMonth()
+    const vio_Year = date.getFullYear()
 
     let vio_objectType
     switch (violation.object) {
@@ -212,9 +224,9 @@ export class ViolationModel extends BaseModel {
       .moveDown(0.8)
       .text('Đã vi phạm            :  Đỗ xe sai quy định ', 20, doc.y)
       .moveDown(0.1)
-      .text('Thời gian         : ' + vio_time + 'giờ ' + vio_time + ', ngày' + vio_day + 'tháng' + vio_day + 'năm ' + (new Date().getFullYear()))
+      .text('Thời gian         : ' + vio_Hour + 'giờ ' + vio_Minutes + ', ngày' + vio_Day + 'tháng' + vio_Month + 'năm ' + vio_Year)
       .moveDown(0.1)
-      .text('địa điểm      : ' + vio_time + ', thành phố Đà Nẵng.')
+      .text('địa điểm      : ' + violation.vio_adress + ', thành phố Đà Nẵng.')
       .moveDown(0.1)
       .text('Yêu cầu chủ phương tiện (lái xe) đến Thanh tra Sở Giao Thông vận tải thành phố Đà Nẵng để giải quyết vi phạm theo quy định.')
       .moveDown(0.1)
