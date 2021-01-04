@@ -1,6 +1,6 @@
 import mongoose from 'mongoose'
 import to from 'await-to-js'
-import _, { result } from 'lodash'
+import _ from 'lodash'
 import { violationsSchema, schemaOptions } from './define'
 import { BaseModel, BaseSchema } from './base'
 import moment from 'moment'
