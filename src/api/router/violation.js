@@ -13,20 +13,24 @@ export const violationRouter = (router) => {
     router.get('/violation', async (req, res, next) => {
         try {
             const { object, status, plate, startDay, endDay, page } = req.query
+            //check page
+            if (_.isEmpty(page)) {
+                throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'số trang không hợp lệ' })
+                
+            }
             if (object) {
                 if (object !== 'loai1' && object !== 'loai2' && object !== 'loai3') {
                     throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'loại xe không hợp lệ' })
                 }
             }
             if (status) {
-                if (status !== 'enabled' && status !== 'disabled' && status !== 'all') {
+                if (status !== 'approved' && status !== 'unapproved' && status !== 'normal') {
                     throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'trạng thái không hợp lệ' })
                 }
             }
 
             const result = await app.violation.getAll(object, status, plate, startDay, endDay, page)
             res.json(result)
-            console.log(result)
         } catch (error) {
             next(error)
         }
@@ -45,23 +49,32 @@ export const violationRouter = (router) => {
         }
     })
 
-    router.put('/violation/:id/approved', async (req, res, next) => {
+    router.put('/violation/approved', async (req, res, next) => {
         try {
-            const { id } = req.params
-            if (!validator.isMongoId(id)) {
-                throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Vi phạm không hợp lệ' })
+            const { ids } = req.body
+            if (!validator.isMongoIdArray(ids)) {
+                throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Id vi phạm phải là một mảng' })
             }
 
-            const status = req.query.status
-            if (status !== 'enabled' && status !== 'disabled') {
-                throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'status không hợp lệ' })
-            }
-
-            const result = await app.violation.changeApproved(id, status)
+            const result = await app.violation.updateApproval(ids, 'approved')
             res.json(result)
 
         } catch (error) {
-            console.log(error)
+            next(error)
+        }
+    })
+
+    router.put('/violation/unapproved', async (req, res, next) => {
+        try {
+            const { ids } = req.body
+            if (!validator.isMongoIdArray(ids)) {
+                throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Id vi phạm phải là một mảng' })
+            }
+
+            const result = await app.violation.updateApproval(ids, 'unapproved')
+            res.json(result)
+
+        } catch (error) {
             next(error)
         }
     })
@@ -69,52 +82,47 @@ export const violationRouter = (router) => {
     router.put('/violation/:id', async (req, res, next) => {
         try {
             const { id } = req.params
-            const { object, plate } = req.query
+            const { object, plate, owner, phone, email } = req.query
             if (!validator.isMongoId(id)) {
                 throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Vi phạm không hợp lệ' })
             }
 
-            const result = await app.violation.editViolation(id, object, plate)
+            const result = await app.violation.editViolation(id, object, plate, owner, phone, email)
             res.json(result)
         } catch (error) {
             next(error)
         }
     })
 
-    router.get('/violation/:page', async (req, res, next) => {
-        try {
-            const { page } = req.params
-            const result = await app.violation.pagination(page)
-            res.json(result)
-        } catch (error) {
-            next(error)
-        }
-    })
+    // router.get('/violation/:page', async (req, res, next) => {
+    //     try {
+    //         const { page } = req.params
+    //         const result = await app.violation.pagination(page)
+    //         res.json(result)
+    //     } catch (error) {
+    //         next(error)
+    //     }
+    // })
 
     router.get('/violation/:id/report', async (req, res, next) => {
         try {
             const { id } = req.params
             const { address, owner } = req.query
 
-            console.log(id)
-
             if (!validator.isMongoId(id)) {
                 throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Vi phạm không hợp lệ' })
             }
-            // res.setHeader()
             await app.violation.report(id, address, owner, res)
-            res.setHeader('Content-Type', 'application/pdf')
-            res.setHeader('X-Filename', violation.plate + '_' + '.pdf')
         } catch (error) {
             next(error)
         }
     })
 
-    router.delete('/violation/:id', async (req, res, next) => {
+    router.delete('/violation/delete', async (req, res, next) => {
         try {
-            const { id } = req.params
-            if (!validator.isMongoId(id)) {
-                throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Vi phạm không hợp lệ' })
+            const { id } = req.query
+            if (!validator.isMongoIdArray(id)) {
+                throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Id vi phạm phải là một mảng' })
             }
 
             const result = await app.violation.delete(id)

@@ -5,29 +5,65 @@ import { AppError, logger } from '../utils'
 import mongoose from 'mongoose'
 import PDFDocument from 'pdfkit'
 import fs from 'fs'
+import path from 'path'
 
 export class Violation {
   constructor() { }
 
   /** Get all violations */
+  /**
+   * 
+   * @param {Number} object 
+   * @param {Number} status 
+   * @param {String} plate 
+   * @param {Date} startDay 
+   * @param {Date} endDay 
+   * @param {Number} page 
+   */
   getAll = async (object, status, plate, startDay, endDay, page) => {
     try {
-      const vehicle = object === 'loai1' ? 0 : 1
-      const boolStatus = status === 'enabled' ? 1 : ('disabled' ? 0 : 2)
-      const objectS = object ? vehicle : []
-      const statusS = status ? boolStatus : []
-      const plateS = plate ? plate : []
-      const sDay = startDay ? (new Date(startDay).toISOString()) : ""
-      const eDay = endDay ? (new Date(endDay).toISOString()) : ""
-      let [err, result] = await to(model.violation.getAll(objectS, statusS, plateS, sDay, eDay, page))
+      let perPage = 10
+      const vehicle = object === 'loai1' ? 0 : object === 'loai2' ? 1 : object === 'loai3' ? 2 : undefined
+      // const searchStatus = status === 'approved' ? 1 : ('unapproved' ? 0 : 2)
+      const searchStatus = status === "approved" ? 1 : status === "unapproved" ? 2 : undefined
+
+      const vioObject = vehicle
+      const vioStatus = searchStatus
+      const vioPlate = plate ? plate : undefined
+      const startSearchDay = startDay ? (new Date(startDay).toISOString()) : undefined
+      const endSearchDay = endDay ? (new Date(endDay).toISOString()) : undefined
+
+      let [err, conditions] = await to(model.violation.conditions(vioObject, vioStatus, vioPlate, startSearchDay, endSearchDay, page))
       if (err) throw err
-      return result
+
+      const dataPromise = model.violation.getDataAll(conditions.conditionsData)
+      const countPromise = model.violation.getCount(conditions.conditionsCount)
+
+      let pageData = [], total = 0
+      let [errPromise, results] = await to(Promise.all([dataPromise, countPromise]))
+      if (errPromise) throw errPromise
+
+      pageData = results[0]
+      total = results[1]
+
+      const totalRecord = total[0]?.myCount
+      const totalPage = Math.ceil(totalRecord / perPage)
+
+      return {
+        pageData,
+        totalRecord,
+        totalPage
+      }
     } catch (error) {
       logger.error('Violations.getAll() error:', error)
       throw new AppError({ code: StatusCodes.INTERNAL_SERVER_ERROR, message: 'Lấy danh sách vi phạm thất bại' })
     }
   }
 
+  /**
+   * 
+   * @param {mongoose.Types.ObjectId} id 
+   */
   getById = async (id) => {
     try {
       let [err, result] = await to(model.violation.getById(id))
@@ -42,22 +78,45 @@ export class Violation {
     }
   }
 
-  changeApproved = async (id, status) => {
+  /**
+   * Update approval status
+   * @param {string[]} ids 
+   * @param {('approved'|'unapproved')} action 
+   */
+  updateApproval = async (ids, action) => {
     try {
-      const boolStatus = status === 'enabled' ? 1 : ('disabled' ? 0 : 2)
-      let [err, result] = await to(model.violation.updatedStatus(id, boolStatus))
+      if (action !== 'approved' && action !== 'unapproved') {
+        throw new AppError('invalid action')
+      }
+
+      await to(model.violation.updatedStatus(ids, action))
       if (err) throw err
 
-      return result
+      return action === 'approved' ? 'Duyệt vi phạm thành công' : 'Bỏ duyệt vi phạm thành công'
     } catch (error) {
-      logger.error('Violations.changeApproved() error:', error)
-      throw new AppError({ code: StatusCodes.INTERNAL_SERVER_ERROR, message: 'Thay đổi thông tin vi phạm thất bại' })
+      logger.error('Violations.updateApproval() error:', error)
+      throw new AppError({ code: StatusCodes.INTERNAL_SERVER_ERROR, message: 'Thay đổi trạng thái duyệt vi phạm thất bại' })
     }
   }
 
-  editViolation = async (id, object, plate) => {
+  /**
+   * 
+   * @param {import('mongoObjectId} id 
+   * @param {Number} object 
+   * @param {String} plate 
+   * @param {String} owner 
+   * @param {Number} phone 
+   * @param {String} email 
+   */
+  editViolation = async (id, object, plate, owner, phone, email) => {
     try {
-      let [err, result] = await to(model.violation.editViolation(id, object, plate))
+      const vioObject = object ? object : ''
+      const vioPlate = plate ? plate : ''
+      const vioOwner = owner ? owner : ''
+      const vioPhone = phone ? phone : ''
+      const vioEmail = email ? email : ''
+
+      let [err, result] = await to(model.violation.editViolation(id, vioObject, vioPlate, vioOwner, vioPhone, vioEmail))
       if (err) throw err
 
       return result
@@ -67,24 +126,27 @@ export class Violation {
     }
   }
 
+  /**
+   * 
+   * @param {import('mongoObjectId} id 
+   * @param {String} address 
+   * @param {String} owner 
+   * @param {Response} res 
+   */
   report = async (id, address, owner, res) => {
     try {
-
       const ownerReport = owner ? owner : ""
       const addressOwnerReport = address ? address : ""
-      console.log("Ds")
 
-      let [err, violation] = await to(model.violation.report(id, addressOwnerReport, ownerReport))
-      console.log(violation)
+      let [err, violation] = await to(model.violation.getById(id))
+      // let [err, violation] = await to(model.violation.report(id, ownerReport, addressOwnerReport))
       if (err) throw err
-      // const vio_daytime = moment(new Date(violation.vio_time)).format('DD/MM/YYYY HH:mm:ss')
-      // const vio_day = vio_daytime.split(' ')[0]
-      // const vio_time = vio_daytime.split(' ')[1]
-      console.log("Ds")
 
       const date = new Date(violation.vio_time)
-      const vio_Hour = date.getHours()
-      const vio_Minutes = date.getMinutes()
+      const getHour = date.getHours()
+      const vio_Hour = ("0" + getHour).slice(-2);
+      const getMinutes = date.getMinutes()
+      const vio_Minutes = ("0" + getMinutes).slice(-2);
       const vio_Day = date.getDate()
       const vio_Month = date.getMonth()
       const vio_Year = date.getFullYear()
@@ -111,74 +173,89 @@ export class Violation {
 
       const doc = new PDFDocument({
         size: 'A5',
-        layout: "portrait",
+        layout: "landscape",
+        margins: {
+          // by default, all are 72
+          top: 60,
+          bottom: 60,
+          left: 60,
+          right: 60
+        }
       })
+      // doc.polygon([100, 0], [50, 100], [150, 200], [200, 100]);
+      // doc.stroke();
+      doc.lineWidth(3);
+      doc.lineJoin('miter')
+        .rect(35, 40, 520, 340)
+        .stroke();
 
-      console.log("Ds")
+      doc.lineWidth(1);
+      doc.lineJoin('miter')
+        .rect(39, 44, 512, 332)
+        .stroke();
 
-      // const font_path = config.staticFolder + '/fonts'
-      // doc.registerFont('regular', font_path + '/times.ttf')
-      // doc.registerFont('italic', font_path + '/times_italic.ttf')
-      // doc.registerFont('bold', font_path + '/times_bold.ttf')
-      // doc.registerFont('bold_italic', font_path + '/times_bolditalic.ttf')
-
-      // res.setHeader('Content-Disposition', 'inline')
+      const font_path = path.join(__dirname, '..', 'fonts')
+      doc.registerFont('regular', font_path + '/times.ttf')
+      doc.registerFont('italic', font_path + '/times_italic.ttf')
+      doc.registerFont('bold', font_path + '/times_bold.ttf')
+      doc.registerFont('bold_italic', font_path + '/times_bolditalic.ttf')
 
       doc.fontSize(12)
-      doc.font('regular').text('SỞ GTVT THÀNH PHỐ ĐÀ NẴNG', 30, doc.y, { continued: true })
+      doc.font('regular').text('SỞ GTVT THÀNH PHỐ ĐÀ NẴNG', 75, doc.y, { continued: true })
       doc.font('bold').text('CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM', { align: 'right' })
-      console.log("dddd")
 
       doc.fontSize(13)
-      doc.font('bold').text('THANH TRA SỞ', 50, doc.y, { align: 'left', continued: true })
-        .underline(75, doc.y + 15, 145, 2)
-      console.log("dddd")
+      doc.font('bold').text('THANH TRA SỞ', 90, doc.y, { align: 'left', continued: true })
+        .underline(115, doc.y + 15, 45, 2)
 
       doc
         .font('bold')
-        .text('Độc lập - Tự do - Hạnh phúc', 0, doc.y, { align: 'right' })
-        .underline(360, doc.y, 110, 2)
+        .text('Độc lập - Tự do - Hạnh phúc', 40, doc.y, { align: 'right' })
+        .underline(315, doc.y, 155, 2)
 
       doc.fontSize(11)
+      doc.moveDown(0.3)
       doc.font('regular')
-        .text('Số .........', 70, doc.y, { align: 'left' })
+        .text('Số .........', 90, doc.y, { align: 'left' })
 
-      doc.moveDown(0.7)
+      doc.moveDown(2)
       doc.font('bold')
-        .text('THANH TRA SỞ GIAO THÔNG VẬN TẢI THÀNH PHỐ ĐÀ NẴNG', 130, doc.y)
+        .fontSize(14)
+        .text('THANH TRA SỞ GIAO THÔNG VẬN TẢI THÀNH PHỐ ĐÀ NẴNG', 85, doc.y)
 
       doc.moveDown(0.3)
+      doc.fontSize(18)
       doc.font('bold').text('THÔNG BÁO', 258, doc.y)
-      console.log("dddd")
 
-      doc.moveDown(0.2)
-      doc.text('Ông (bà) là chủ phương tiện (lái xe) BKS số: ' + violation.plate, 30, doc.y, { continued: true })
-        .moveDown(0.1)
-        .fontSize(12)
-        .moveDown(0.8)
-        .text('Đã vi phạm            :  Đỗ xe sai quy định ', 20, doc.y)
-        .moveDown(0.1)
-        .text('Thời gian         : ' + vio_Hour + 'giờ ' + vio_Minutes + ', ngày' + vio_Day + 'tháng' + vio_Month + 'năm ' + vio_Year)
-        .moveDown(0.1)
-        .text('địa điểm      : ' + violation.vio_adress + ', thành phố Đà Nẵng.')
-        .moveDown(0.1)
+      doc.moveDown(0.3)
+      doc.fontSize(13)
+        .font('regular')
+        .text('Ông (bà) là chủ phương tiện (lái xe) BKS số:   ' + violation.plate, 75, doc.y)
+        .moveDown(0.2)
+        .text('Đã vi phạm:   Đỗ xe sai quy định ')
+        .moveDown(0.2)
+        .text('Thời gian:   ' + vio_Hour + '   giờ   ' + vio_Minutes + '   phút' + ',   ngày   ' + vio_Day + '   tháng   ' + vio_Month + '   năm   ' + vio_Year)
+        .moveDown(0.2)
+        .text('Địa điểm:   ' + violation.vio_adress + ', thành phố Đà Nẵng.')
+        .moveDown(0.2)
         .text('Yêu cầu chủ phương tiện (lái xe) đến Thanh tra Sở Giao Thông vận tải thành phố Đà Nẵng để giải quyết vi phạm theo quy định.')
-        .moveDown(0.1)
-        .text('Vào Lúc : ....... giờ ........, ngày ........... tháng .......... năm ' + (new Date().getFullYear()))
-        .moveDown(0.1)
-        .text('Địa điểm   :  ........................')
-        .moveDown(0.1)
-        .text('khi đi mang theo   :  Giấy phép lái xe và các giấy tờ xe.')
-        .moveDown(0.1)
-        .font('italic').text('(Ghi chú: Liên hệ Đội ........................ )')
-      console.log("Ds")
+        .moveDown(0.2)
+        .text('Vào lúc: .......... giờ .........., ngày .......... tháng .......... năm ' + (new Date().getFullYear()))
+        .moveDown(0.2)
+        .text('Địa điểm:  ...........................................................................')
+        .moveDown(0.2)
+        .text('Khi đi mang theo:  Giấy phép lái xe và các giấy tờ xe.')
+        .moveDown(0.2)
+        .font('italic').text('(Ghi chú: Liên hệ Đội ................................................................................................. )')
 
       doc.end()
-      // res.setHeader('Content-Type', 'application/pdf')
-      // res.setHeader('X-Filename', violation.plate + '_' + '.pdf')
+
+      res.setHeader('Content-Type', 'application/pdf')
+      res.setHeader('X-Filename', violation.plate + '.pdf')
       doc.pipe(res)
     } catch (error) {
-
+      logger.error(error)
+      throw new AppError({ code: StatusCodes.INTERNAL_SERVER_ERROR, message: 'Xuất biên bản vi phạm thất bại' })
     }
   }
 
@@ -199,14 +276,22 @@ export class Violation {
       // if (errDelete) throw errDelete
 
       // session.endSession()
+      if (_.isEmpty(id)) {
+        throw 'Danh sách xóa rỗng'
+      }
 
+      //validate object id
+      for (const iid of id) {
+        if (iid !== new mongoose.Types.ObjectId(id).toString()) {
+          throw 'Có id của vi phạm không hợp lệ'
+        }
+      }
       let [errDelete] = await to(model.violation.delete(id))
       if (errDelete) throw errDelete
 
       return 'Xóa vi phạm thành công'
     } catch (error) {
       logger.error('Violations.delete() error:', error)
-      if (session) await session.abortTransaction()
       throw new AppError({ code: StatusCodes.INTERNAL_SERVER_ERROR, message: 'Xóa vi phạm thất bại' })
     }
   }

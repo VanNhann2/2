@@ -8,7 +8,7 @@ export const violationsSchema = {
   actions: { type: Number, required: true },
   // object loai phuong tien
   // action luon 3: loai vi pham
-  // status la trang thai
+  // status la trang thai 0 la all , 1 là đã duyệt, 2 là chưa duyệt
   object: { type: Number, required: true },
   status: { type: Number, enum: [0, 1, 2], required: true },
   plate: { type: String, required: true },
@@ -19,7 +19,7 @@ export const violationsSchema = {
   plate_images: [{ type: String }],
   vio_time: { type: Date, required: true },
   vio_adress: { type: String, required: true },
-  ownew: { type: String, required: true },
+  owner: { type: String, required: true },
   phone: { type: Number },
   email: { type: String },
   deleted: { type: Boolean },
