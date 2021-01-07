@@ -49,7 +49,7 @@ export class ViolationModel extends BaseModel {
    * 
    * @param {[]} conditions 
    */
-  getDataAll = async (conditions) => {
+  getAll = async (conditions) => {
     let [err, result] = await to(this.model.aggregate(conditions))
     if (err) throw err
     return result

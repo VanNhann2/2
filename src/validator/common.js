@@ -21,3 +21,17 @@ export const isMongoIdArray = (ids) => {
 
   return true
 }
+
+export const inObject = (object) => {
+  if (object) {
+    let arrayObject = ['xemay', 'oto', 'xetai', 'xekhach', 'xebuyt']
+    return _.includes(arrayObject, object)
+  }
+}
+
+export const inStatus = (status) => {
+  if (status) {
+    let arrayStatus = ['approved', 'unapproved', 'normal']
+    return _.includes(arrayStatus, status)
+  }
+}

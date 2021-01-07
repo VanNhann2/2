@@ -3,14 +3,21 @@ import StatusCodes from 'http-status-codes'
 import { model } from '../models'
 import { AppError, logger } from '../utils'
 import mongoose from 'mongoose'
+import _ from 'lodash'
 import PDFDocument from 'pdfkit'
-import fs from 'fs'
+import fs, { stat } from 'fs'
 import path from 'path'
 
 export class Violation {
-  constructor() { }
+  perPage = undefined
+  arrayObject = []
+  arrayStatus = []
+  constructor() { 
+    this.perPage = 10
+    this.arrayObject = ["xemay", "oto", "xetai"]
+    this.arrayStatus = ['approved', 'unapproved', 'normal']
+  }
 
-  /** Get all violations */
   /**
    * 
    * @param {Number} object 
@@ -20,15 +27,13 @@ export class Violation {
    * @param {Date} endDay 
    * @param {Number} page 
    */
+  /** Get all violations */
   getAll = async (object, status, plate, startDay, endDay, page) => {
     try {
-      let perPage = 10
-      const vehicle = object === 'loai1' ? 0 : object === 'loai2' ? 1 : object === 'loai3' ? 2 : undefined
-      // const searchStatus = status === 'approved' ? 1 : ('unapproved' ? 0 : 2)
-      const searchStatus = status === "approved" ? 1 : status === "unapproved" ? 2 : undefined
+      // let perPage = 10
+      let vioObject = _.includes(this.arrayObject, object) ? _.indexOf(this.arrayObject, object) : undefined
+      let vioStatus = _.includes(this.arrayStatus, status) ? (_.indexOf(this.arrayStatus, status) + 1) : undefined
 
-      const vioObject = vehicle
-      const vioStatus = searchStatus
       const vioPlate = plate ? plate : undefined
       const startSearchDay = startDay ? (new Date(startDay).toISOString()) : undefined
       const endSearchDay = endDay ? (new Date(endDay).toISOString()) : undefined
@@ -36,7 +41,7 @@ export class Violation {
       let [err, conditions] = await to(model.violation.conditions(vioObject, vioStatus, vioPlate, startSearchDay, endSearchDay, page))
       if (err) throw err
 
-      const dataPromise = model.violation.getDataAll(conditions.conditionsData)
+      const dataPromise = model.violation.getAll(conditions.conditionsData)
       const countPromise = model.violation.getCount(conditions.conditionsCount)
 
       let pageData = [], total = 0
@@ -47,7 +52,7 @@ export class Violation {
       total = results[1]
 
       const totalRecord = total[0]?.myCount
-      const totalPage = Math.ceil(totalRecord / perPage)
+      const totalPage = Math.ceil(totalRecord / this.perPage)
 
       return {
         pageData,
@@ -101,7 +106,7 @@ export class Violation {
 
   /**
    * 
-   * @param {import('mongoObjectId} id 
+   * @param {mongoose.Types.ObjectId} id 
    * @param {Number} object 
    * @param {String} plate 
    * @param {String} owner 
@@ -128,7 +133,7 @@ export class Violation {
 
   /**
    * 
-   * @param {import('mongoObjectId} id 
+   * @param {mongoose.Types.ObjectId} id 
    * @param {String} address 
    * @param {String} owner 
    * @param {Response} res 
@@ -139,7 +144,6 @@ export class Violation {
       const addressOwnerReport = address ? address : ""
 
       let [err, violation] = await to(model.violation.getById(id))
-      // let [err, violation] = await to(model.violation.report(id, ownerReport, addressOwnerReport))
       if (err) throw err
 
       const date = new Date(violation.vio_time)
@@ -150,26 +154,6 @@ export class Violation {
       const vio_Day = date.getDate()
       const vio_Month = date.getMonth()
       const vio_Year = date.getFullYear()
-      let vio_objectType
-      switch (violation.object) {
-        case 0:
-          vio_objectType = 'Xe máy'
-          break
-        case 1:
-          vio_objectType = 'Ô tô'
-          break
-        case 2:
-          vio_objectType = 'Xe tải'
-          break
-        case 3:
-          vio_objectType = 'Xe khách'
-          break
-        case 4:
-          vio_objectType = 'Xe buýt'
-          break
-        default:
-          break
-      }
 
       const doc = new PDFDocument({
         size: 'A5',
