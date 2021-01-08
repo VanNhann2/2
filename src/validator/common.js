@@ -18,7 +18,6 @@ export const isMongoIdArray = (ids) => {
       return false
     }
   }
-
   return true
 }
 
