@@ -26,7 +26,7 @@ export class ViolationModel extends BaseModel {
     const statusCondition = _.isEmpty(_.toString(vioStatus)) ? {} : { $or: [{ status: vioStatus }] }
     const plateCondition = _.isEmpty(vioPlate) ? {} : { $or: [{ plate: vioPlate }] }
     const searchDateCondition =
-      _.isEmpty(startSearchDate) || _.isEmpty(endSearchDate) ? {} : { $or: [{ vio_time: { $gte: new Date(startSearchDate), $lte: new Date(endSearchDate) } }] }
+      _.isEmpty(startSearchDate) && _.isEmpty(endSearchDate) ? {} : { $or: [{ vio_time: { $gte: new Date(startSearchDate), $lte: new Date(endSearchDate) } }] }
     const otherCondition = { deleted: { $ne: true } }
     const match = { $match: { $and: [objectCondition, statusCondition, plateCondition, searchDateCondition, otherCondition] } }
 

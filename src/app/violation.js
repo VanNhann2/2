@@ -38,9 +38,8 @@ export class Violation {
       let vioStatus = _.includes(this.arrayStatus, status) ? _.indexOf(this.arrayStatus, status) + 1 : undefined
 
       const vioPlate = plate ? plate : undefined
-      const startSearchDate = startDate ? new Date(startDate).toISOString() : undefined
-      const endSearchDate = endDate ? new Date(endDate).toISOString() : undefined
-
+      const startSearchDate = (startDate && startDate != '' && startDate != "null") ? new Date(startDate).toISOString() : undefined
+      const endSearchDate = (endDate && endDate != '' && endDate != "null") ? new Date(endDate).toISOString() : undefined
       let [err, conditions] = await to(model.violation.conditions(vioObject, vioStatus, vioPlate, startSearchDate, endSearchDate, page))
       if (err) throw err
 
@@ -142,7 +141,7 @@ export class Violation {
    * @param {String} owner
    * @param {Response} res
    */
-  report = async (id, address, owner, res) => {
+  report = async (id, address, owner, res, solvingDate) => {
     try {
       const ownerReport = owner ? owner : ''
       const addressOwnerReport = address ? address : ''
@@ -154,13 +153,19 @@ export class Violation {
 
       const date = new Date(violation.vio_time)
       const getHour = date.getHours()
-      const vio_Hour = ('0' + getHour).slice(-2)
+      const vioHour = ('0' + getHour).slice(-2)
       const getMinutes = date.getMinutes()
-      const vio_Minutes = ('0' + getMinutes).slice(-2)
-      const vio_Date = date.getDate()
-      const vio_Month = date.getMonth()
-      const vio_Year = date.getFullYear()
+      const vioMinutes = ('0' + getMinutes).slice(-2)
+      const vioDate = date.getDate()
+      const vioMonth = date.getMonth() + 1
+      const vioYear = date.getFullYear()
 
+      const sovl = new Date(sovlingDate)
+      const sovlingDay = ('0' + sovl.getDate()).slice(-2)
+      const sovlingHour = ('0' + sovl.getHours()).slice(-2)
+      const sovlingMinute = ('0' + sovl.getMinutes()).slice(-2)
+      const sovlingMonth = sovl.getMonth() + 1
+      const sovlingYear = sovl.getFullYear()
       const doc = new PDFDocument({
         size: 'A5',
         layout: 'landscape',
@@ -217,15 +222,25 @@ export class Violation {
         .moveDown(0.2)
         .text('Đã vi phạm:   Đỗ xe sai quy định ')
         .moveDown(0.2)
-        .text(
-          'Thời gian:   ' + vio_Hour + '   giờ   ' + vio_Minutes + '   phút' + ',   ngày   ' + vio_Date + '   tháng   ' + vio_Month + '   năm   ' + vio_Year
-        )
+        .text('Thời gian:   ' + vioHour + '   giờ   ' + vioMinutes + '   phút' + ',   ngày   ' + vioDate + '   tháng   ' + vioMonth + '   năm   ' + vioYear)
         .moveDown(0.2)
         .text('Địa điểm:   ' + violation.vio_adress + ', thành phố Đà Nẵng.')
         .moveDown(0.2)
         .text('Yêu cầu chủ phương tiện (lái xe) đến Thanh tra Sở Giao Thông vận tải thành phố Đà Nẵng để giải quyết vi phạm theo quy định.')
         .moveDown(0.2)
-        .text('Vào lúc: .......... giờ .........., ngày .......... tháng .......... năm ' + new Date().getFullYear())
+        .text(
+          'Vào lúc:    ' +
+            sovlingHour +
+            '   giờ   ' +
+            sovlingMinute +
+            '   phút' +
+            ',   ngày   ' +
+            sovlingDay +
+            '   tháng   ' +
+            sovlingMonth +
+            '   năm   ' +
+            sovlingYear
+        )
         .moveDown(0.2)
         .text('Địa điểm:  ...........................................................................')
         .moveDown(0.2)

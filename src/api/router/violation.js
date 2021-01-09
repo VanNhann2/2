@@ -18,17 +18,19 @@ export const violationRouter = (router) => {
         throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Số trang không hợp lệ' })
       }
 
-      if (object) {
-        if (!validator.inObject(object)) {
-          throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Loại xe không hợp lệ' })
-        }
-      }
+      // console.log("object")
+      // console.log(object)
+      // if (object && object !== '') {
+      //   if (!validator.inObject(object)) {
+      //     throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Loại xe không hợp lệ' })
+      //   }
+      // }
 
-      if (status) {
-        if (!validator.inStatus(status)) {
-          throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Trạng thái không hợp lệ' })
-        }
-      }
+      // if (status && status !== '') {
+      //   if (!validator.inStatus(status)) {
+      //     throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Trạng thái không hợp lệ' })
+      //   }
+      // }
 
       const result = await app.violation.getAll(object, status, plate, startDate, endDate, page)
       res.json(result)
@@ -103,12 +105,12 @@ export const violationRouter = (router) => {
   router.get('/violation/:id/report', async (req, res, next) => {
     try {
       const { id } = req.params
-      const { address, owner } = req.query
+      const { address, owner, solvingDate } = req.query
 
       if (!validator.isMongoId(id)) {
         throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Vi phạm không hợp lệ' })
       }
-      await app.violation.report(id, address, owner, res)
+      await app.violation.report(id, address, owner, res, solvingDate)
     } catch (error) {
       next(error)
     }
