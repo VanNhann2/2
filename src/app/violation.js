@@ -141,14 +141,14 @@ export class Violation {
    * @param {String} owner
    * @param {Response} res
    */
-  report = async (id, address, owner, res, solvingDate) => {
+  report = async (id, address, owner, res, sovlingDate) => {
     try {
       const ownerReport = owner ? owner : ''
       const addressOwnerReport = address ? address : ''
 
       let [err, violation] = await to(model.violation.getById(id))
       if (err) throw err
-
+      console.log("dasasda")
       let vioObject = _.indexOf(this.arrayObject, violation.object)
 
       const date = new Date(violation.vio_time)

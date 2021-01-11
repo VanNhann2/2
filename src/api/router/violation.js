@@ -103,12 +103,12 @@ export const violationRouter = (router) => {
   router.get('/violation/:id/report', async (req, res, next) => {
     try {
       const { id } = req.params
-      const { address, owner, solvingDate } = req.query
+      const { address, owner, sovlingDate } = req.query
 
       if (!validator.isMongoId(id)) {
         throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Vi phạm không hợp lệ' })
       }
-      await app.violation.report(id, address, owner, res, solvingDate)
+      await app.violation.report(id, address, owner, res, sovlingDate)
     } catch (error) {
       next(error)
     }
