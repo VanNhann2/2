@@ -77,14 +77,13 @@ export class ViolationModel extends BaseModel {
       $match: { $and: [otherCondition, idCondition] },
     }
 
-    const lookup = [{ $lookup: { from: 'cameras', localField: 'camera', foreignField: 'code', as: 'camera' } }]
     const project = {
       $project: {
         _id: 0,
       },
     }
 
-    let [err, result] = await to(this.model.aggregate([match, ...lookup, { $addFields: { id: '$_id' } }, project]))
+    let [err, result] = await to(this.model.aggregate([match, { $addFields: { id: '$_id' } }, project]))
     if (err) throw err
 
     if (_.isEmpty(result)) return {}

@@ -18,15 +18,13 @@ export const violationRouter = (router) => {
         throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Số trang không hợp lệ' })
       }
 
-      // console.log("object")
-      // console.log(object)
-      // if (object && object !== '') {
+      // if (object) {
       //   if (!validator.inObject(object)) {
       //     throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Loại xe không hợp lệ' })
       //   }
       // }
 
-      // if (status && status !== '') {
+      // if (status) {
       //   if (!validator.inStatus(status)) {
       //     throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Trạng thái không hợp lệ' })
       //   }
@@ -83,7 +81,7 @@ export const violationRouter = (router) => {
   router.put('/violation/:id', async (req, res, next) => {
     try {
       const { id } = req.params
-      const { object, plate, owner, phone, email } = req.query
+      const { object, plate, owner, phone, email } = req.body
 
       if (object) {
         if (!validator.inObject(object)) {
