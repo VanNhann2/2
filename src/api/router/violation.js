@@ -12,6 +12,7 @@ import * as validator from '../../validator'
 export const violationRouter = (router) => {
   router.post('/violation', async (req, res, next) => {
     try {
+      // const { page } = req.query
       const { object, status, plate, startDate, endDate, page } = req.body
       //check page
       if (_.isEmpty(page)) {

@@ -23,7 +23,7 @@ export class Violation {
   constructor() {
     this.perPage = 10
     this.arrayObject = ['motorcycle', 'car', 'bus', 'truck', 'container']
-    this.arrayStatus = ['approved', 'unapproved', 'normal', 'finishReport', 'finishPenal', 'expired']
+    this.arrayStatus = ['approved', 'unapproved', 'finishReport', 'finishPenal', 'expired']
     // const protoFile = path.join(__dirname, config.protoFile);
 
     this.#grpcClient = new GRpcClient('10.49.46.251:50052', config.protoFile, 'parking.Camera')
@@ -85,10 +85,11 @@ export class Violation {
       let [errGet, result] = await to(model.violation.getById(id))
       if (errGet) throw errGet
 
-      let [err, getByIdCam] = await to(this.#grpcClient.makeRequest('get', { ids: { c1: result.camera } }))
-      if (err) throw err
+      // console.log(id)
+      // let [err, getByIdCam] = await to(this.#grpcClient.makeRequest('get', { ids: { c1: result.camera } }))
+      // if (err) throw err
 
-      console.log(getByIdCam)
+      // console.log(getByIdCam)
 
       return result
     } catch (error) {
