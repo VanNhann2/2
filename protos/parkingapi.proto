@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+package parking;
+
+// -----------------Camera service-----------------
+
+service Camera {
+  rpc Get (GetCameraRequest) returns (GetCameraReply) {}
+}
+
+message GetCameraRequest {
+  map<string, string> ids = 1;
+}
+
+message GetCameraReply {
+  map<string, CameraData> cameras = 1;
+}
+
+message CameraData {
+  string id = 1;
+  string name = 2;
+  string address = 3;
+  double lat = 4;
+  double lng = 5;
+}
+
+// -----------------Task manager service-----------------
+
+service TaskManager {
+  rpc Notify (Empty) returns (Empty) {}
+}
+
+// -----------------Others service-----------------
+
+// -----------------Empty message-----------------
+
+message Empty {}

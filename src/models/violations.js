@@ -93,7 +93,7 @@ export class ViolationModel extends BaseModel {
   /**
    * Update approval status
    * @param {String[]} ids
-   * @param {('approved'|'unapproved')} action
+   * @param {('approved'|'unapproved'|'finishReport'|'finishPenal'|'expired')} action
    */
   updatedStatus = async (ids, action) => {
     let [err, result] = await to(
@@ -105,7 +105,7 @@ export class ViolationModel extends BaseModel {
         },
         {
           $set: {
-            status: action === 'unapproved' ? 1 : 2,
+            status: action === 'unapproved' ? 1 : action === 'approved' ? 2 : action === 'finishReport' ? 3 : 4,
           },
         }
       )

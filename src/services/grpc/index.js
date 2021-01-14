@@ -1,0 +1,1 @@
+export { GRpcClient } from './client'

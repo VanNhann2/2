@@ -9,16 +9,24 @@ import fs, { stat } from 'fs'
 import path from 'path'
 import { validate } from 'uuid'
 import * as validator from '../validator'
+import { GRpcClient } from '../services/grpc'
+import { config } from '../configs'
 
 export class Violation {
+  /** @type {GRpcClient} */
+  #grpcClient = undefined
+
   // perPage = undefined
   // arrayObject = []
   // arrayStatus = []
 
   constructor() {
     this.perPage = 10
-    this.arrayObject = ['xemay', 'oto', 'xetai']
-    this.arrayStatus = ['approved', 'unapproved', 'normal']
+    this.arrayObject = ['motorcycle', 'car', 'bus', 'truck', 'container']
+    this.arrayStatus = ['approved', 'unapproved', 'normal', 'finishReport', 'finishPenal', 'expired']
+    // const protoFile = path.join(__dirname, config.protoFile);
+
+    this.#grpcClient = new GRpcClient('10.49.46.251:50052', config.protoFile, 'parking.Camera')
   }
 
   /**
@@ -38,8 +46,8 @@ export class Violation {
       let vioStatus = _.includes(this.arrayStatus, status) ? _.indexOf(this.arrayStatus, status) + 1 : undefined
 
       const vioPlate = plate ? plate : undefined
-      const startSearchDate = (startDate && startDate != '' && startDate != "null") ? new Date(startDate).toISOString() : undefined
-      const endSearchDate = (endDate && endDate != '' && endDate != "null") ? new Date(endDate).toISOString() : undefined
+      const startSearchDate = startDate && startDate != '' && startDate != 'null' ? new Date(startDate).toISOString() : undefined
+      const endSearchDate = endDate && endDate != '' && endDate != 'null' ? new Date(endDate).toISOString() : undefined
       let [err, conditions] = await to(model.violation.conditions(vioObject, vioStatus, vioPlate, startSearchDate, endSearchDate, page))
       if (err) throw err
 
@@ -74,10 +82,13 @@ export class Violation {
    */
   getById = async (id) => {
     try {
-      let [err, result] = await to(model.violation.getById(id))
-      if (err) {
-        throw err
-      }
+      let [errGet, result] = await to(model.violation.getById(id))
+      if (errGet) throw errGet
+
+      let [err, getByIdCam] = await to(this.#grpcClient.makeRequest('get', { ids: { c1: result.camera } }))
+      if (err) throw err
+
+      console.log(getByIdCam)
 
       return result
     } catch (error) {
@@ -89,7 +100,7 @@ export class Violation {
   /**
    * Update approval status
    * @param {string[]} ids
-   * @param {('approved'|'unapproved')} action
+   * @param {('approved'|'unapproved'|'finishReport'|'finishPenal'|'expired')} action
    */
   updateApproval = async (ids, action) => {
     try {
@@ -97,10 +108,10 @@ export class Violation {
         throw new AppError('invalid action')
       }
 
-      await to(model.violation.updatedStatus(ids, action))
+      let [err, results] = await to(model.violation.updatedStatus(ids, action))
       if (err) throw err
 
-      return action === 'approved' ? 'Duyệt vi phạm thành công' : 'Bỏ duyệt vi phạm thành công'
+      return action === 'approved' ? 'Duyệt vi phạm thành công' : action === 'finishReport' ? 'Hoàn thành xử phạt' : 'Bỏ duyệt vi phạm thành công'
     } catch (error) {
       logger.error('Violations.updateApproval() error:', error)
       throw new AppError({ code: StatusCodes.INTERNAL_SERVER_ERROR, message: 'Thay đổi trạng thái duyệt vi phạm thất bại' })
@@ -137,18 +148,21 @@ export class Violation {
   /**
    *
    * @param {mongoose.Types.ObjectId} id
-   * @param {String} address
-   * @param {String} owner
+   * @param {String} vioAddress
+   * @param {String} vioOwner
+   * @param {String} addressOwner
    * @param {Response} res
+   * @param {Date} sovlingDate
    */
-  report = async (id, address, owner, res, sovlingDate) => {
+  report = async (id, vioAddress, vioOwner, addressOwner, res, sovlingDate) => {
     try {
-      const ownerReport = owner ? owner : ''
-      const addressOwnerReport = address ? address : ''
+      const ownerReport = vioOwner ? vioOwner : ''
+      const addressOwnerReport = addressOwner ? addressOwner : ''
+      const vioAddressReport = vioAddress ? vioAddress : ''
 
       let [err, violation] = await to(model.violation.getById(id))
       if (err) throw err
-      console.log("dasasda")
+
       let vioObject = _.indexOf(this.arrayObject, violation.object)
 
       const date = new Date(violation.vio_time)
@@ -160,12 +174,13 @@ export class Violation {
       const vioMonth = date.getMonth() + 1
       const vioYear = date.getFullYear()
 
-      const sovl = new Date(sovlingDate)
-      const sovlingDay = ('0' + sovl.getDate()).slice(-2)
-      const sovlingHour = ('0' + sovl.getHours()).slice(-2)
-      const sovlingMinute = ('0' + sovl.getMinutes()).slice(-2)
-      const sovlingMonth = sovl.getMonth() + 1
-      const sovlingYear = sovl.getFullYear()
+      const sovlingDateReport = new Date(sovlingDate)
+      const sovlingHour = ('0' + sovlingDateReport.getHours()).slice(-2)
+      const sovlingMinute = ('0' + sovlingDateReport.getMinutes()).slice(-2)
+      const sovlingDay = sovlingDateReport.getDate()
+      const sovlingMonth = sovlingDateReport.getMonth() + 1
+      const sovlingYear = sovlingDateReport.getFullYear()
+
       const doc = new PDFDocument({
         size: 'A5',
         layout: 'landscape',
@@ -224,7 +239,7 @@ export class Violation {
         .moveDown(0.2)
         .text('Thời gian:   ' + vioHour + '   giờ   ' + vioMinutes + '   phút' + ',   ngày   ' + vioDate + '   tháng   ' + vioMonth + '   năm   ' + vioYear)
         .moveDown(0.2)
-        .text('Địa điểm:   ' + violation.vio_adress + ', thành phố Đà Nẵng.')
+        .text('Địa điểm:   ' + vioAddressReport + ', thành phố Đà Nẵng.')
         .moveDown(0.2)
         .text('Yêu cầu chủ phương tiện (lái xe) đến Thanh tra Sở Giao Thông vận tải thành phố Đà Nẵng để giải quyết vi phạm theo quy định.')
         .moveDown(0.2)
@@ -252,8 +267,10 @@ export class Violation {
       doc.end()
 
       res.setHeader('Content-Type', 'application/pdf')
-      res.setHeader('X-Filename', violation.plate + '.pdf')
+      res.setHeader('X-Filename', +vioDate + '-' + vioMonth + '-' + vioYear + '_' + violation.plate + '.pdf')
       doc.pipe(res)
+
+      await to(model.violation.updatedStatus(id, 'finishReport'))
     } catch (error) {
       logger.error(error)
       throw new AppError({ code: StatusCodes.INTERNAL_SERVER_ERROR, message: 'Xuất biên bản vi phạm thất bại' })

@@ -42,19 +42,19 @@ const databaseConfig = {
 //   subStreamPostfix: process.env.SUB_STREAM_POSTFIX,
 // }
 
-// const grpcConfig = {
-//   protoFolder: process.env.PROTO_FOLDER,
-//   protoFile: process.env.PROTO_FILE,
-//   grpcAddress: process.env.GRPC_ADDRESS,
-//   grpcServiceName: process.env.GRPC_SERVICE_NAME,
-// }
+const grpcConfig = {
+  protoFolder: process.env.PROTO_FOLDER,
+  protoFile: process.env.PROTO_FILE,
+  grpcAddress: process.env.GRPC_ADDRESS,
+  grpcServiceName: process.env.GRPC_SERVICE_NAME,
+}
 
 export const config = {
   env: process.env.NODE_ENV,
   ...hostConfig,
   ...databaseConfig,
-//   ...storageConfig,
-//   ...snapshotConfig,
-//   ...streamConfig,
-//   ...grpcConfig,
+  //   ...storageConfig,
+  //   ...snapshotConfig,
+  //   ...streamConfig,
+  ...grpcConfig,
 }

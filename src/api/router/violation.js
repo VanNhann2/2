@@ -10,9 +10,9 @@ import * as validator from '../../validator'
  */
 
 export const violationRouter = (router) => {
-  router.get('/violation', async (req, res, next) => {
+  router.post('/violation', async (req, res, next) => {
     try {
-      const { object, status, plate, startDate, endDate, page } = req.query
+      const { object, status, plate, startDate, endDate, page } = req.body
       //check page
       if (_.isEmpty(page)) {
         throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Số trang không hợp lệ' })
@@ -78,6 +78,21 @@ export const violationRouter = (router) => {
     }
   })
 
+  // router hoàn thành xử phạt
+  router.put('/violation/:id/finishPenal', async (req, res, next) => {
+    try {
+      const { id } = req.params
+      if (!validator.isMongoId(id)) {
+        throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Id vi phạm không hợp lệ' })
+      }
+
+      const result = await app.violation.updateApproval(id, 'finishPenal')
+      res.json(result)
+    } catch (error) {
+      next(error)
+    }
+  })
+
   router.put('/violation/:id', async (req, res, next) => {
     try {
       const { id } = req.params
@@ -93,6 +108,14 @@ export const violationRouter = (router) => {
         throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Vi phạm không hợp lệ' })
       }
 
+      if (!validator.inEmail(email)) {
+        throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Email không hợp lệ' })
+      }
+
+      if (!validator.inPhone(phone)) {
+        throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Số điện thoại không hợp lệ' })
+      }
+
       const result = await app.violation.editViolation(id, object, plate, owner, phone, email)
       res.json(result)
     } catch (error) {
@@ -100,15 +123,15 @@ export const violationRouter = (router) => {
     }
   })
 
-  router.get('/violation/:id/report', async (req, res, next) => {
+  router.post('/violation/:id/report', async (req, res, next) => {
     try {
       const { id } = req.params
-      const { address, owner, sovlingDate } = req.query
+      const { vioAddress, vioOwner, addressOwner, sovlingDate } = req.body
 
       if (!validator.isMongoId(id)) {
         throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Vi phạm không hợp lệ' })
       }
-      await app.violation.report(id, address, owner, res, sovlingDate)
+      await app.violation.report(id, vioAddress, vioOwner, addressOwner, res, sovlingDate)
     } catch (error) {
       next(error)
     }
