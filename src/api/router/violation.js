@@ -109,12 +109,16 @@ export const violationRouter = (router) => {
         throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Vi phạm không hợp lệ' })
       }
 
-      if (!validator.inEmail(email)) {
-        throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Email không hợp lệ' })
+      if (email) {
+        if (!validator.verifyEmail(email)) {
+          throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Email không hợp lệ' })
+        }
       }
 
-      if (!validator.inPhone(phone)) {
-        throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Số điện thoại không hợp lệ' })
+      if (phone) {
+        if (!validator.verifyPhone(phone)) {
+          throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Số điện thoại không hợp lệ' })
+        }
       }
 
       const result = await app.violation.editViolation(id, object, plate, owner, phone, email)
