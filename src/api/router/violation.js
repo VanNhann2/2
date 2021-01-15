@@ -99,10 +99,14 @@ export const violationRouter = (router) => {
       const { id } = req.params
       const { status, object, plate, owner, phone, email } = req.body
 
-      if (status && !_.isEmpty(status)) {
+      if (status || _.isEmpty(status)) {
         if (!validator.inStatus(status)) {
           throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Trạng thái không hợp lệ' })
         }
+      }
+
+      if (plate && _.isEmpty(plate)) {
+        throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Yêu cầu nhập biển số xe' })
       }
 
       if (object && !_.isEmpty(object)) {
@@ -115,13 +119,13 @@ export const violationRouter = (router) => {
         throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Vi phạm không hợp lệ' })
       }
 
-      if (email) {
+      if (email && !_.isEmpty(email)) {
         if (!validator.verifyEmail(email)) {
           throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Email không hợp lệ' })
         }
       }
 
-      if (phone) {
+      if (phone && !_.isEmpty(phone)) {
         if (!validator.verifyPhone(phone)) {
           throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Số điện thoại không hợp lệ' })
         }

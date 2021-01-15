@@ -34,7 +34,7 @@ message GetVideoRequest {
 }
 
 message GetVideoReply {
-  map<string, VideoData> Videos = 1;
+  map<string, VideoData> videos = 1;
 }
 
 message VideoData {

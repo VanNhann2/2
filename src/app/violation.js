@@ -7,6 +7,7 @@ import _ from 'lodash'
 import PDFDocument from 'pdfkit'
 import fs, { stat } from 'fs'
 import path from 'path'
+import { RequestError } from '../utils'
 import { validate } from 'uuid'
 import * as validator from '../validator'
 import { GRpcClient } from '../services/grpc'
@@ -27,7 +28,7 @@ export class Violation {
     // const protoFile = path.join(__dirname, config.protoFile);
 
     this.#grpcClient = new GRpcClient('10.49.46.251:50052', config.protoFile, 'parking.Camera')
-    // this.#grpcClient = new GRpcClient('10.49.46.251:50055', config.protoFile, 'parking.Video')
+    this.#grpcClient = new GRpcClient('10.49.46.23:50055', config.protoFile, 'parking.Video')
   }
 
   /**
@@ -92,10 +93,10 @@ export class Violation {
 
       // console.log(getByIdCam)
 
-      // let [err, getVideoById] = await to(this.#grpcClient.makeRequest1('get', { startend: { c1: result.vio_time } }))
-      // if (err) throw err
+      let [err, getVideoById] = await to(this.#grpcClient.makeRequest1('get', { startend: { c1: result.vio_time } }))
+      if (err) throw err
 
-      // console.log(getByIdCam)
+      console.log(getVideoById)
 
       return result
     } catch (error) {

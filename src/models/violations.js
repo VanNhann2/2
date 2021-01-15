@@ -33,12 +33,26 @@ export class ViolationModel extends BaseModel {
     const project = {
       $project: {
         _id: 0,
+        id: '$_id',
+        action: 1,
+        object: 1,
+        status: 1,
+        plate: 1,
+        camera: 1,
+        time: 1,
+        images: 1,
+        objectImages: '$object_images',
+        plagteImages: '$plate_images',
+        vioTime: '$vio_time',
+        email: 1,
+        owner: 1,
+        phone: 1,
       },
     }
-    const addField = { $addFields: { id: '$_id' } }
+    // const addField = { $addFields: { id: '$_id' } }
     //const conditionsData = [match, project, { $addFields: { id: '$_id' } }, { $sort: { vio_time: -1 } }, { $skip: perPage * (page - 1) }, { $limit: perPage }]
     //const conditionsCount = [match, project, { $addFields: { id: '$_id' } }]
-    const conditionsData = [match, addField, project, { $sort: { vio_time: -1 } }, { $skip: this.perPage * (page - 1) }, { $limit: this.perPage }]
+    const conditionsData = [match, project, { $sort: { vio_time: -1 } }, { $skip: this.perPage * (page - 1) }, { $limit: this.perPage }]
     const conditionsCount = [match]
 
     return { conditionsData, conditionsCount }
@@ -80,10 +94,24 @@ export class ViolationModel extends BaseModel {
     const project = {
       $project: {
         _id: 0,
+        id: '$_id',
+        action: 1,
+        object: 1,
+        status: 1,
+        plate: 1,
+        camera: 1,
+        time: 1,
+        images: 1,
+        objectImages: '$object_images',
+        plagteImages: '$plate_images',
+        vioTime: '$vio_time',
+        email: 1,
+        owner: 1,
+        phone: 1,
       },
     }
 
-    let [err, result] = await to(this.model.aggregate([match, { $addFields: { id: '$_id' } }, project]))
+    let [err, result] = await to(this.model.aggregate([match, project]))
     if (err) throw err
 
     if (_.isEmpty(result)) return {}
