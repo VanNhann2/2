@@ -24,6 +24,29 @@ message CameraData {
   double lng = 5;
 }
 
+// ----------------- Video service --------------
+service Video {
+  rpc Get (GetVideoRequest) returns (GetVideoReply) {}
+}
+
+message GetVideoRequest {
+  map<string, string> startend = 1;
+}
+
+message GetVideoReply {
+  map<string, VideoData> Videos = 1;
+}
+
+message VideoData {
+  string id = 1;
+  string name = 2;
+  string start = 3;
+  string end = 4;
+  string path = 5;
+  bool status = 6;
+}
+
+
 // -----------------Task manager service-----------------
 
 service TaskManager {

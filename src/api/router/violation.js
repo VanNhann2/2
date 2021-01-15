@@ -80,26 +80,32 @@ export const violationRouter = (router) => {
   })
 
   // router hoàn thành xử phạt
-  router.put('/violation/:id/finishPenal', async (req, res, next) => {
-    try {
-      const { id } = req.params
-      if (!validator.isMongoId(id)) {
-        throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Id vi phạm không hợp lệ' })
-      }
-      let ids = [id]
-      const result = await app.violation.updateApproval(ids, 'finishPenal')
-      res.json(result)
-    } catch (error) {
-      next(error)
-    }
-  })
+  // router.put('/violation/:id/finishPenal', async (req, res, next) => {
+  //   try {
+  //     const { id } = req.params
+  //     if (!validator.isMongoId(id)) {
+  //       throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Id vi phạm không hợp lệ' })
+  //     }
+  //     let ids = [id]
+  //     const result = await app.violation.updateApproval(ids, 'finishPenal')
+  //     res.json(result)
+  //   } catch (error) {
+  //     next(error)
+  //   }
+  // })
 
   router.put('/violation/:id', async (req, res, next) => {
     try {
       const { id } = req.params
-      const { object, plate, owner, phone, email } = req.body
+      const { status, object, plate, owner, phone, email } = req.body
 
-      if (object) {
+      if (status && !_.isEmpty(status)) {
+        if (!validator.inStatus(status)) {
+          throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Trạng thái không hợp lệ' })
+        }
+      }
+
+      if (object && !_.isEmpty(object)) {
         if (!validator.inObject(object)) {
           throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Loại xe không hợp lệ' })
         }
@@ -121,7 +127,7 @@ export const violationRouter = (router) => {
         }
       }
 
-      const result = await app.violation.editViolation(id, object, plate, owner, phone, email)
+      const result = await app.violation.editViolation(id, status, object, plate, owner, phone, email)
       res.json(result)
     } catch (error) {
       next(error)

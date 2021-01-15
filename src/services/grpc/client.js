@@ -52,6 +52,15 @@ export class GRpcClient {
     })
   }
 
+  makeRequest1 = async (method, requestData) => {
+    return new Promise((resolve, reject) => {
+      this.#client[method](requestData, (err, response) => {
+        if (err) reject(err)
+        resolve(response)
+      })
+    })
+  }
+
   /**
    * Load protocol buffer
    * @param {string} path

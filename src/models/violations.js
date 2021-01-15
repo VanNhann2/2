@@ -124,12 +124,13 @@ export class ViolationModel extends BaseModel {
    * @param {String} vioPhone
    * @param {String} vioEmail
    */
-  editViolation = async (id, vioObject, vioPlate, vioOwner, vioPhone, vioEmail) => {
+  editViolation = async (id, vioStatus, vioObject, vioPlate, vioOwner, vioPhone, vioEmail) => {
     let [err, result] = await to(
       this.model.findByIdAndUpdate(
         id,
         {
           $set: {
+            status: vioStatus,
             object: vioObject,
             plate: vioPlate,
             owner: vioOwner,

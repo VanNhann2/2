@@ -27,6 +27,7 @@ export class Violation {
     // const protoFile = path.join(__dirname, config.protoFile);
 
     this.#grpcClient = new GRpcClient('10.49.46.251:50052', config.protoFile, 'parking.Camera')
+    // this.#grpcClient = new GRpcClient('10.49.46.251:50055', config.protoFile, 'parking.Video')
   }
 
   /**
@@ -36,7 +37,7 @@ export class Violation {
    * @param {String} plate
    * @param {Date} startDate
    * @param {Date} endDate
-   * @param {Number} page
+   * @param {String} page
    */
   /** Get all violations */
   getAll = async (object, status, plate, startDate, endDate, page) => {
@@ -91,6 +92,11 @@ export class Violation {
 
       // console.log(getByIdCam)
 
+      // let [err, getVideoById] = await to(this.#grpcClient.makeRequest1('get', { startend: { c1: result.vio_time } }))
+      // if (err) throw err
+
+      // console.log(getByIdCam)
+
       return result
     } catch (error) {
       logger.error('Violations.getById() error:', error)
@@ -134,15 +140,16 @@ export class Violation {
    * @param {Number} phone
    * @param {String} email
    */
-  editViolation = async (id, object, plate, owner, phone, email) => {
+  editViolation = async (id, status, object, plate, owner, phone, email) => {
     try {
+      const vioStatus = _.includes(this.arrayStatus, status) ? _.indexOf(this.arrayStatus, status) + 1 : undefined
       const vioObject = _.includes(this.arrayObject, object) ? _.indexOf(this.arrayObject, object) : undefined
       const vioPlate = plate ? plate : undefined
       const vioOwner = owner ? owner : undefined
       const vioPhone = phone ? phone : undefined
       const vioEmail = email ? email : undefined
 
-      let [err, result] = await to(model.violation.editViolation(id, vioObject, vioPlate, vioOwner, vioPhone, vioEmail))
+      let [err, result] = await to(model.violation.editViolation(id, vioStatus, vioObject, vioPlate, vioOwner, vioPhone, vioEmail))
       if (err) throw err
 
       return result
