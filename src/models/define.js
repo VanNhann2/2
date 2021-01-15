@@ -20,7 +20,7 @@ export const violationsSchema = {
   vio_time: { type: Date, required: true },
   vio_adress: { type: String, required: true },
   owner: { type: String, required: true },
-  phone: { type: Number },
+  phone: { type: String },
   email: { type: String },
   deleted: { type: Boolean },
 }

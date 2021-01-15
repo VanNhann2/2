@@ -105,7 +105,8 @@ export class ViolationModel extends BaseModel {
         },
         {
           $set: {
-            status: action === 'unapproved' ? 1 : action === 'approved' ? 2 : action === 'finishReport' ? 3 : 4,
+            // status: action === 'unapproved' ? 1 : action === 'approved' ? 2 : action === 'finishReport' ? 3 : 4,
+            status: action === 'approved' ? 1 : action === 'unapproved' ? 2 : action === 'finishReport' ? 3 : action === 'finishPenal' ? 4 : 5,
           },
         }
       )

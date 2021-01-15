@@ -22,7 +22,7 @@ export class Violation {
 
   constructor() {
     this.perPage = 10
-    this.arrayObject = ['motorcycle', 'car', 'bus', 'truck', 'container']
+    this.arrayObject = ['bike', 'car', 'bus', 'truck']
     this.arrayStatus = ['approved', 'unapproved', 'finishReport', 'finishPenal', 'expired']
     // const protoFile = path.join(__dirname, config.protoFile);
 
@@ -108,11 +108,17 @@ export class Violation {
       if (!validator.inStatus(action)) {
         throw new AppError('invalid action')
       }
-
+      console.log(ids, action)
       let [err, results] = await to(model.violation.updatedStatus(ids, action))
       if (err) throw err
 
-      return action === 'approved' ? 'Duyệt vi phạm thành công' : action === 'finishReport' ? 'Hoàn thành xử phạt' : 'Bỏ duyệt vi phạm thành công'
+      return action === 'approved'
+        ? 'Duyệt vi phạm thành công'
+        : action === 'finishPenal'
+        ? 'Hoàn thành xử phạt'
+        : action === 'finishReport'
+        ? 'Đã xuất biên bản'
+        : 'Bỏ duyệt vi phạm thành công'
     } catch (error) {
       logger.error('Violations.updateApproval() error:', error)
       throw new AppError({ code: StatusCodes.INTERNAL_SERVER_ERROR, message: 'Thay đổi trạng thái duyệt vi phạm thất bại' })

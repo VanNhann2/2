@@ -17,10 +17,10 @@ export class GRpcClient {
    */
   constructor(serverAddress, protoPath, serviceName) {
     this.#proto = this.#loadProto(protoPath)
-    console.log('dadasd')
+    // console.log('dadasd')
     // console.log(this.#proto)
     // console.log(serviceName)
-    console.log(_.get(this.#proto, serviceName))
+    // console.log(_.get(this.#proto, serviceName))
     this.#client = new (_.get(this.#proto, serviceName))(serverAddress, grpc.credentials.createInsecure())
   }
 

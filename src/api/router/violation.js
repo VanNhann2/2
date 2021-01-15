@@ -19,17 +19,17 @@ export const violationRouter = (router) => {
         throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Số trang không hợp lệ' })
       }
 
-      // if (object) {
-      //   if (!validator.inObject(object)) {
-      //     throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Loại xe không hợp lệ' })
-      //   }
-      // }
+      if (object && !_.isEmpty(object)) {
+        if (!validator.inObject(object)) {
+          throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Loại xe không hợp lệ' })
+        }
+      }
 
-      // if (status) {
-      //   if (!validator.inStatus(status)) {
-      //     throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Trạng thái không hợp lệ' })
-      //   }
-      // }
+      if (status && !_.isEmpty(status)) {
+        if (!validator.inStatus(status)) {
+          throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Trạng thái không hợp lệ' })
+        }
+      }
 
       const result = await app.violation.getAll(object, status, plate, startDate, endDate, page)
       res.json(result)
@@ -86,8 +86,8 @@ export const violationRouter = (router) => {
       if (!validator.isMongoId(id)) {
         throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Id vi phạm không hợp lệ' })
       }
-
-      const result = await app.violation.updateApproval(id, 'finishPenal')
+      let ids = [id]
+      const result = await app.violation.updateApproval(ids, 'finishPenal')
       res.json(result)
     } catch (error) {
       next(error)
