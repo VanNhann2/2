@@ -49,6 +49,10 @@ const grpcConfig = {
   grpcServiceName: process.env.GRPC_SERVICE_NAME,
 }
 
+const violationConfig = {
+  pathVideo: process.env.PATH_VIDEO_VIOLATION
+}
+
 export const config = {
   env: process.env.NODE_ENV,
   ...hostConfig,
@@ -56,5 +60,6 @@ export const config = {
   //   ...storageConfig,
   //   ...snapshotConfig,
   //   ...streamConfig,
+  ...violationConfig,
   ...grpcConfig,
 }

@@ -27,7 +27,7 @@ export class Violation {
     this.arrayStatus = ['approved', 'unapproved', 'finishReport', 'finishPenal', 'expired']
     // const protoFile = path.join(__dirname, config.protoFile);
 
-    this.#grpcClient = new GRpcClient('10.49.46.251:50052', config.protoFile, 'parking.Camera')
+    // this.#grpcClient = new GRpcClient('10.49.46.251:50052', config.protoFile, 'parking.Camera')
     this.#grpcClient = new GRpcClient('10.49.46.23:50055', config.protoFile, 'parking.Video')
   }
 
@@ -80,6 +80,18 @@ export class Violation {
 
   /**
    *
+   * @param {String} plate
+   */
+  getAllPublic = async (plate) => {
+    let [err, result] = await to(model.violation.getAllPublic(plate))
+    if (err) throw err
+
+    console.log(result)
+    return result ? result[0] : {}
+  }
+
+  /**
+   *
    * @param {mongoose.Types.ObjectId} id
    */
   getById = async (id) => {
@@ -91,14 +103,15 @@ export class Violation {
       // let [err, getByIdCam] = await to(this.#grpcClient.makeRequest('get', { ids: { c1: result.camera } }))
       // if (err) throw err
 
-      // console.log(getByIdCam)
+      console.log(result)
 
-      let [err, getVideoById] = await to(this.#grpcClient.makeRequest1('get', { startend: { c1: result.vio_time } }))
+      let [err, getVideoByDate] = await to(this.#grpcClient.makeRequest1('get', { time: { c1: result.vioTime } }))
       if (err) throw err
 
-      console.log(getVideoById)
+      console.log(getVideoByDate)
+      const dataResult = { ...result, ...getVideoByDate }
 
-      return result
+      return dataResult
     } catch (error) {
       logger.error('Violations.getById() error:', error)
       throw new AppError({ code: StatusCodes.INTERNAL_SERVER_ERROR, message: 'Lấy thông tin vi phạm thất bại' })

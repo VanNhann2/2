@@ -30,7 +30,7 @@ service Video {
 }
 
 message GetVideoRequest {
-  map<string, string> startend = 1;
+  map<string, string> time = 1;
 }
 
 message GetVideoReply {

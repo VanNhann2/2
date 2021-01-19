@@ -78,6 +78,37 @@ export class ViolationModel extends BaseModel {
     return result
   }
 
+  getAllPublic = async (plate) => {
+    console.log(plate)
+    const otherCondition = { deleted: { $ne: true } }
+    const plateCondition = _.isEmpty(plate) ? {} : { $or: [{ plate: plate }] }
+
+    const match = { $match: { $and: [plateCondition, otherCondition] } }
+
+    const project = {
+      $project: {
+        _id: 0,
+        id: '$_id',
+        action: 1,
+        object: 1,
+        status: 1,
+        plate: 1,
+        camera: 1,
+        time: 1,
+        images: 1,
+        objectImages: '$object_images',
+        plagteImages: '$plate_images',
+        vioTime: '$vio_time',
+        email: 1,
+        owner: 1,
+        phone: 1,
+      },
+    }
+    let [err, result] = await to(this.model.aggregate([match, project]))
+    if (err) throw err
+
+    return result
+  }
   /**
    *
    * @param {mongoose.Types.ObjectId} id
