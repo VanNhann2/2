@@ -38,9 +38,9 @@ export const violationRouter = (router) => {
     }
   })
 
-  router.get('/public/violation/:plate', async (req, res, next) => {
+  router.post('/public/violation', async (req, res, next) => {
     try {
-      const { plate } = req.params
+      const { plate } = req.body
 
       const result = await app.violation.getAllPublic(plate)
 

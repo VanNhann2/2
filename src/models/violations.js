@@ -82,7 +82,7 @@ export class ViolationModel extends BaseModel {
     console.log(plate)
     const otherCondition = { deleted: { $ne: true } }
     const plateCondition = _.isEmpty(plate) ? {} : { $or: [{ plate: plate }] }
-
+    console.log(plateCondition)
     const match = { $match: { $and: [plateCondition, otherCondition] } }
 
     const project = {
@@ -109,6 +109,7 @@ export class ViolationModel extends BaseModel {
 
     return result
   }
+
   /**
    *
    * @param {mongoose.Types.ObjectId} id
@@ -229,9 +230,9 @@ export class ViolationModel extends BaseModel {
   }
 
   /**
- *
- * @param {mongoose.Types.ObjectId} id
- */
+   *
+   * @param {mongoose.Types.ObjectId} id
+   */
   getStatistical = async (stage, type) => {
     const match = {
       $match: { $and: [otherCondition] },
