@@ -135,10 +135,10 @@ export class Violation {
       return action === 'approved'
         ? 'Duyệt vi phạm thành công'
         : action === 'finishPenal'
-        ? 'Hoàn thành xử phạt'
-        : action === 'finishReport'
-        ? 'Đã xuất biên bản'
-        : 'Bỏ duyệt vi phạm thành công'
+          ? 'Hoàn thành xử phạt'
+          : action === 'finishReport'
+            ? 'Đã xuất biên bản'
+            : 'Bỏ duyệt vi phạm thành công'
     } catch (error) {
       logger.error('Violations.updateApproval() error:', error)
       throw new AppError({ code: StatusCodes.INTERNAL_SERVER_ERROR, message: 'Thay đổi trạng thái duyệt vi phạm thất bại' })
@@ -273,16 +273,16 @@ export class Violation {
         .moveDown(0.2)
         .text(
           'Vào lúc:    ' +
-            sovlingHour +
-            '   giờ   ' +
-            sovlingMinute +
-            '   phút' +
-            ',   ngày   ' +
-            sovlingDay +
-            '   tháng   ' +
-            sovlingMonth +
-            '   năm   ' +
-            sovlingYear
+          sovlingHour +
+          '   giờ   ' +
+          sovlingMinute +
+          '   phút' +
+          ',   ngày   ' +
+          sovlingDay +
+          '   tháng   ' +
+          sovlingMonth +
+          '   năm   ' +
+          sovlingYear
         )
         .moveDown(0.2)
         .text('Địa điểm:  ...........................................................................')
@@ -330,6 +330,23 @@ export class Violation {
     } catch (error) {
       logger.error('Violations.delete() error:', error)
       throw new AppError({ code: StatusCodes.INTERNAL_SERVER_ERROR, message: 'Xóa vi phạm thất bại' })
+    }
+  }
+
+  /**
+ * 
+ * @param {'date'|'week'|'month'|'year'} stage 
+ * @param {'synthetic'|'finishReport'|'finishPenal'|} type 
+ */
+  getStatistical = async (stage, type) => {
+    try {
+      let [err, result] = await to(model.violation.getStatistical(stage, type))
+      if (err) throw err
+
+      return result
+    } catch (error) {
+      logger.error('Violations.getStatistical() error:', error)
+      throw new AppError({ code: StatusCodes.INTERNAL_SERVER_ERROR, message: 'Lấy thông tin thống kê thất bại' })
     }
   }
 }

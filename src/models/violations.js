@@ -227,4 +227,19 @@ export class ViolationModel extends BaseModel {
     if (err) throw err
     return result
   }
+
+  /**
+ *
+ * @param {mongoose.Types.ObjectId} id
+ */
+  getStatistical = async (stage, type) => {
+    const match = {
+      $match: { $and: [otherCondition] },
+    }
+
+    let [err, getAll] = await to(this.model.aggregate([match]))
+    if (err) throw err
+
+    return result[0]
+  }
 }

@@ -177,4 +177,15 @@ export const violationRouter = (router) => {
       next(error)
     }
   })
+
+  router.post('/statistical', async (req, res, next) => {
+    try {
+      const { stage, type } = req.body
+      const result = await app.violation.getStatistical(stage, type)
+
+      res.json(result)
+    } catch (error) {
+      next(error)
+    }
+  })
 }
