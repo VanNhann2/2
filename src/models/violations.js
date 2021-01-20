@@ -231,16 +231,34 @@ export class ViolationModel extends BaseModel {
 
   /**
    *
-   * @param {mongoose.Types.ObjectId} id
+   * @param {'date'|'week'|'month'|'year'} stage
+   * @param {'synthetic'|'finishReport'|'finishPenal'|} type
    */
   getStatistical = async (stage, type) => {
+    const otherCondition = { deleted: { $ne: true } }
+    const statusCondition = { $or: [{ status: 2 }] }
+
+    // let startSearchDate
+    // let endSearchDate
+    // if (stage === 'day') {
+    //   startSearchDate = new Date(new Date().setHours(0, 0, 0, 0))
+    //   endSearchDate = new Date(new Date())
+    // }
+    const endSearchDate = new Date('Wed Jan 20 2016 18:01:16 GMT+0700 (Indochina Time)')
+
+    const sortDay = { $or: [{ vio_time: { $gte: endSearchDate, $lte: new Date() } }] }
+
     const match = {
-      $match: { $and: [otherCondition] },
+      $match: { $and: [otherCondition, sortDay] },
     }
 
-    let [err, getAll] = await to(this.model.aggregate([match]))
+    const group = { $group: { _id: '$status', count: { $sum: 1 } } }
+
+    let [err, getAll] = await to(this.model.aggregate([match, group]))
     if (err) throw err
 
-    return result[0]
+    console.log('Model getAll --------------------')
+    console.log(getAll)
+    return getAll
   }
 }

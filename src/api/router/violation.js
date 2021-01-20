@@ -42,6 +42,9 @@ export const violationRouter = (router) => {
     try {
       const { plate } = req.body
 
+      if (_.isEmpty(plate)) {
+        throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Nhập biển kiểm soát' })
+      }
       const result = await app.violation.getAllPublic(plate)
 
       res.json(result)
