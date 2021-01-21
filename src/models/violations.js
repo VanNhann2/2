@@ -234,25 +234,33 @@ export class ViolationModel extends BaseModel {
    * @param {Date()} timeEndSearch
    * @param {Number} status
    */
-  getStatistical = async (timeEndSearch, statusSearch) => {
+  getStatistical = async (date, timeline) => {
     const otherCondition = { deleted: { $ne: true } }
-    const statusCondition = _.isEmpty(_.toString(statusSearch)) ? {} : { $or: [{ status: statusSearch }] }
-    const sortEndDay = _.isEmpty(_.toString(timeEndSearch)) ? {} : { $or: [{ vio_time: { $gte: new Date(timeEndSearch), $lte: new Date() } }] }
+    const sortDateChose = _.isEmpty(_.toString(date)) ? {} : { $or: [{ vio_time: { $lte: new Date(date) } }] }
     const match = {
-      $match: { $and: [otherCondition, statusCondition, sortEndDay] },
+      $match: { $and: [otherCondition, sortDateChose] },
     }
 
-    const group = { $group: { _id: '$status', count: { $sum: 1 } } }
-
-    const project = {
-      $project: {
-        status: '$_id',
-        count: 1,
-        _id: 0,
+    const group = {
+      $group: {
+        _id: {
+          day: { $dayOfMonth: '$vio_time' },
+          month: { $month: '$vio_time' },
+          year: { $year: '$vio_time' },
+        },
+        count: { $sum: 1 },
+        date: { $first: '$vio_time' },
       },
     }
 
-    let [err, result] = await to(this.model.aggregate([match, group, project]))
+    const project = {
+      $project: {
+        date: { $dateToString: { format: '%Y-%m-%d', date: '$date' } },
+        count: 1,
+      },
+    }
+
+    let [err, result] = await to(this.model.aggregate([match, group, project, { $sort: { _id: -1 } }, { $limit: 15 }]))
     if (err) throw err
 
     return result

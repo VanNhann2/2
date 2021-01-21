@@ -340,54 +340,15 @@ export class Violation {
 
   /**
    *
-   * @param {'day'|'week'|'month'|'year'|Date()} timeline
-   * @param {'synthetic'|'finishReport'|'finishPenal'} status
+   * @param {Date} date
+   * @param {'day'|'week'|'month'|'year'} timeline
    */
-  getStatistical = async (timeline, status) => {
+  getStatistical = async (date, timeline) => {
     try {
-      let currentDate = new Date()
-      let timeEndSearch
-      let statusSearch
-      if (!_.isEmpty(timeline)) {
-        if (timeline === 'day') {
-          let lastWeek = moment().subtract(1, 'days').format('MM-DD-YYYY')
-          timeEndSearch = new Date(lastWeek)
-        } else if (timeline === 'week') {
-          // function getLastWeek() {
-          //   var today = new Date('Thu Jan 1 2021 08:56:30 GMT+0700 (Indochina Time)')
-          //   var lastWeek = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 7);
-          //   return lastWeek;
-          // }
-          // var lastWeek = getLastWeek();
-          // var lastWeekMonth = lastWeek.getMonth() + 1;
-          // var lastWeekDay = lastWeek.getDate();
-          // var lastWeekYear = lastWeek.getFullYear();
+      
+      let dateSearch = new Date(date)
 
-          // result == lastWeekMonth + "/" + lastWeekDay + "/" + lastWeekYear;
-
-          // d.setFullYear(2020, 11, 3);
-
-          let lastWeek = moment().subtract(7, 'days').format('MM-DD-YYYY')
-          timeEndSearch = new Date(lastWeek)
-        } else if (timeline === 'month') {
-          let lastWeek = moment().subtract(30, 'days').format('MM-DD-YYYY')
-          timeEndSearch = new Date(lastWeek)
-        } else if (timeline === 'year') {
-          let fullYear = currentDate.getFullYear() - 1
-          timeEndSearch = new Date(currentDate.setFullYear(fullYear))
-        } else timeEndSearch = timeline
-      }
-
-      if (!_.isEmpty(status)) {
-        if (status === 'synthetic') {
-          statusSearch = 2
-        } else if (status === 'finishPenal') {
-          statusSearch = 4
-        } else if (status === 'finishReport') {
-          statusSearch = 3
-        } else statusSearch = null
-      }
-      let [err, result] = await to(model.violation.getStatistical(timeEndSearch, statusSearch))
+      let [err, result] = await to(model.violation.getStatistical(dateSearch, timeline))
       if (err) throw err
 
       return result

@@ -32,11 +32,9 @@ export const inObject = (object) => {
 
 export const inTimeline = (timeline) => {
   let arrayTimeline = ['day', 'week', 'month', 'year']
-  if (!_.includes(arrayTimeline, timeline) && !moment(timeline).isValid()) {
-    return false
+  if (_.includes(arrayTimeline, timeline)) {
+    return true
   }
-
-  return true
 }
 
 export const inStatusStatistical = (status) => {
