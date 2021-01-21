@@ -28,6 +28,20 @@ export const inObject = (object) => {
   }
 }
 
+export const inTimeline = (timeline) => {
+  if (timeline) {
+    let arrayTimeline = ['day', 'week', 'month', 'year']
+    return _.includes(arrayTimeline, timeline)
+  }
+}
+
+export const inStatusStatistical = (status) => {
+  if (status) {
+    let arrayStatus = ['synthetic', 'finishPenal', 'finishReport']
+    return _.includes(arrayStatus, status)
+  }
+}
+
 export const inStatus = (status) => {
   if (status) {
     let arrayStatus = ['approved', 'unapproved', 'normal', 'finishReport', 'finishPenal', 'expired']

@@ -204,7 +204,7 @@ export class ViolationModel extends BaseModel {
     if (err) throw err
     return result
   }
-
+  timeEndSearch
   /**
    *
    * @param {mongoose.Types.ObjectId} id
@@ -231,25 +231,16 @@ export class ViolationModel extends BaseModel {
 
   /**
    *
-   * @param {'date'|'week'|'month'|'year'} stage
-   * @param {'synthetic'|'finishReport'|'finishPenal'|} type
+   * @param {Date()} timeEndSearch
+   * @param {Number} status
    */
-  getStatistical = async (stage, type) => {
+  getStatistical = async (timeEndSearch, statusSearch) => {
     const otherCondition = { deleted: { $ne: true } }
-    const statusCondition = { $or: [{ status: 2 }] }
-
-    // let startSearchDate
-    // let endSearchDate
-    // if (stage === 'day') {
-    //   startSearchDate = new Date(new Date().setHours(0, 0, 0, 0))
-    //   endSearchDate = new Date(new Date())
-    // }
-    const endSearchDate = new Date('Wed Jan 20 2016 18:01:16 GMT+0700 (Indochina Time)')
-
-    const sortDay = { $or: [{ vio_time: { $gte: endSearchDate, $lte: new Date() } }] }
+    const statusCondition = _.isEmpty(_.toString(statusSearch)) ? {} : { $or: [{ status: statusSearch }] }
+    const sortEndDay = _.isEmpty(_.toString(timeEndSearch)) ? {} : { $or: [{ vio_time: { $gte: timeEndSearch, $lte: new Date() } }] }
 
     const match = {
-      $match: { $and: [otherCondition, sortDay] },
+      $match: { $and: [otherCondition, statusCondition, sortEndDay] },
     }
 
     const group = { $group: { _id: '$status', count: { $sum: 1 } } }

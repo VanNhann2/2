@@ -12,6 +12,7 @@ import { validate } from 'uuid'
 import * as validator from '../validator'
 import { GRpcClient } from '../services/grpc'
 import { config } from '../configs'
+import moment from 'moment'
 
 export class Violation {
   /** @type {GRpcClient} */
@@ -139,10 +140,10 @@ export class Violation {
       return action === 'approved'
         ? 'Duyệt vi phạm thành công'
         : action === 'finishPenal'
-        ? 'Hoàn thành xử phạt'
-        : action === 'finishReport'
-        ? 'Đã xuất biên bản'
-        : 'Bỏ duyệt vi phạm thành công'
+          ? 'Hoàn thành xử phạt'
+          : action === 'finishReport'
+            ? 'Đã xuất biên bản'
+            : 'Bỏ duyệt vi phạm thành công'
     } catch (error) {
       logger.error('Violations.updateApproval() error:', error)
       throw new AppError({ code: StatusCodes.INTERNAL_SERVER_ERROR, message: 'Thay đổi trạng thái duyệt vi phạm thất bại' })
@@ -277,16 +278,16 @@ export class Violation {
         .moveDown(0.2)
         .text(
           'Vào lúc:    ' +
-            sovlingHour +
-            '   giờ   ' +
-            sovlingMinute +
-            '   phút' +
-            ',   ngày   ' +
-            sovlingDay +
-            '   tháng   ' +
-            sovlingMonth +
-            '   năm   ' +
-            sovlingYear
+          sovlingHour +
+          '   giờ   ' +
+          sovlingMinute +
+          '   phút' +
+          ',   ngày   ' +
+          sovlingDay +
+          '   tháng   ' +
+          sovlingMonth +
+          '   năm   ' +
+          sovlingYear
         )
         .moveDown(0.2)
         .text('Địa điểm:  ...........................................................................')
@@ -339,12 +340,56 @@ export class Violation {
 
   /**
    *
-   * @param {'date'|'week'|'month'|'year'} stage
-   * @param {'synthetic'|'finishReport'|'finishPenal'|} type
+   * @param {'day'|'week'|'month'|'year'} timeline
+   * @param {'synthetic'|'finishReport'|'finishPenal'} status
    */
-  getStatistical = async (stage, type) => {
+  getStatistical = async (timeline, status) => {
     try {
-      let [err, result] = await to(model.violation.getStatistical(stage, type))
+      let currentDate = new Date()
+      let timeEndSearch
+      let statusSearch
+      if (!_.isEmpty(timeline)) {
+        if (timeline === 'day') {
+          let lastWeek = moment().subtract('days', 1).format('MM-DD-YYYY')
+          timeEndSearch = new Date(lastWeek)
+        } else if (timeline === 'week') {
+          // function getLastWeek() {
+          //   var today = new Date('Thu Jan 1 2021 08:56:30 GMT+0700 (Indochina Time)')
+          //   var lastWeek = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 7);
+          //   return lastWeek;
+          // }
+          // var lastWeek = getLastWeek();
+          // var lastWeekMonth = lastWeek.getMonth() + 1;
+          // var lastWeekDay = lastWeek.getDate();
+          // var lastWeekYear = lastWeek.getFullYear();
+
+          // result == lastWeekMonth + "/" + lastWeekDay + "/" + lastWeekYear;
+
+          // d.setFullYear(2020, 11, 3);
+
+          let lastWeek = moment().subtract('days', 7).format('MM-DD-YYYY')
+          timeEndSearch = new Date(lastWeek)
+
+        } else if (timeline === 'month') {
+          let lastWeek = moment().subtract('days', 30).format('MM-DD-YYYY')
+          timeEndSearch = new Date(lastWeek)
+
+        } else if (timeline === 'year') {
+          let fullYear = currentDate.getFullYear() - 1
+          timeEndSearch = new Date(currentDate.setFullYear(fullYear))
+        } else timeEndSearch = null
+      }
+
+      if (!_.isEmpty(status)) {
+        if (status === 'synthetic') {
+          statusSearch = 2
+        } else if (status === 'finishPenal') {
+          statusSearch = 4
+        } else if (status === 'finishReport') {
+          statusSearch = 3
+        } else statusSearch = null
+      }
+      let [err, result] = await to(model.violation.getStatistical(timeEndSearch, statusSearch))
       if (err) throw err
 
       return result

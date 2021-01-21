@@ -183,8 +183,25 @@ export const violationRouter = (router) => {
 
   router.post('/statistical', async (req, res, next) => {
     try {
-      const { stage, type } = req.body
-      const result = await app.violation.getStatistical(stage, type)
+      const { timeline, status } = req.body
+
+      if (status && _.isEmpty(status)) {
+        throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Yêu cầu tải trạng thái' })
+      }
+
+      if (timeline && !_.isEmpty(timeline)) {
+        if (!validator.inTimeline(timeline)) {
+          throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'TimeLine không hợp lệ ' })
+        }
+      }
+      
+      if (status && !_.isEmpty(status)) {
+        if (!validator.inStatusStatistical(status)) {
+          throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Trạng thái không hợp lệ' })
+        }
+      }
+
+      const result = await app.violation.getStatistical(timeline, status)
 
       res.json(result)
     } catch (error) {
