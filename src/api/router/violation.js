@@ -185,16 +185,12 @@ export const violationRouter = (router) => {
     try {
       const { timeline, status } = req.body
 
-      if (status && _.isEmpty(status)) {
-        throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Yêu cầu tải trạng thái' })
-      }
-
       if (timeline && !_.isEmpty(timeline)) {
         if (!validator.inTimeline(timeline)) {
           throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'TimeLine không hợp lệ ' })
         }
       }
-      
+
       if (status && !_.isEmpty(status)) {
         if (!validator.inStatusStatistical(status)) {
           throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Trạng thái không hợp lệ' })

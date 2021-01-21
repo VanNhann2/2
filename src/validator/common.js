@@ -1,5 +1,7 @@
 import mongoose from 'mongoose'
 import _ from 'lodash'
+import moment from 'moment'
+
 /**
  * Validate MongoDB ObjectID
  * @param {string} id value to check
@@ -29,10 +31,12 @@ export const inObject = (object) => {
 }
 
 export const inTimeline = (timeline) => {
-  if (timeline) {
-    let arrayTimeline = ['day', 'week', 'month', 'year']
-    return _.includes(arrayTimeline, timeline)
+  let arrayTimeline = ['day', 'week', 'month', 'year']
+  if (!_.includes(arrayTimeline, timeline) && !moment(timeline).isValid()) {
+    return false
   }
+
+  return true
 }
 
 export const inStatusStatistical = (status) => {

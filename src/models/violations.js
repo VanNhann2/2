@@ -237,19 +237,24 @@ export class ViolationModel extends BaseModel {
   getStatistical = async (timeEndSearch, statusSearch) => {
     const otherCondition = { deleted: { $ne: true } }
     const statusCondition = _.isEmpty(_.toString(statusSearch)) ? {} : { $or: [{ status: statusSearch }] }
-    const sortEndDay = _.isEmpty(_.toString(timeEndSearch)) ? {} : { $or: [{ vio_time: { $gte: timeEndSearch, $lte: new Date() } }] }
-
+    const sortEndDay = _.isEmpty(_.toString(timeEndSearch)) ? {} : { $or: [{ vio_time: { $gte: new Date(timeEndSearch), $lte: new Date() } }] }
     const match = {
       $match: { $and: [otherCondition, statusCondition, sortEndDay] },
     }
 
     const group = { $group: { _id: '$status', count: { $sum: 1 } } }
 
-    let [err, getAll] = await to(this.model.aggregate([match, group]))
+    const project = {
+      $project: {
+        status: '$_id',
+        count: 1,
+        _id: 0,
+      },
+    }
+
+    let [err, result] = await to(this.model.aggregate([match, group, project]))
     if (err) throw err
 
-    console.log('Model getAll --------------------')
-    console.log(getAll)
-    return getAll
+    return result
   }
 }

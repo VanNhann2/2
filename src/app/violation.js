@@ -140,10 +140,10 @@ export class Violation {
       return action === 'approved'
         ? 'Duyệt vi phạm thành công'
         : action === 'finishPenal'
-          ? 'Hoàn thành xử phạt'
-          : action === 'finishReport'
-            ? 'Đã xuất biên bản'
-            : 'Bỏ duyệt vi phạm thành công'
+        ? 'Hoàn thành xử phạt'
+        : action === 'finishReport'
+        ? 'Đã xuất biên bản'
+        : 'Bỏ duyệt vi phạm thành công'
     } catch (error) {
       logger.error('Violations.updateApproval() error:', error)
       throw new AppError({ code: StatusCodes.INTERNAL_SERVER_ERROR, message: 'Thay đổi trạng thái duyệt vi phạm thất bại' })
@@ -278,16 +278,16 @@ export class Violation {
         .moveDown(0.2)
         .text(
           'Vào lúc:    ' +
-          sovlingHour +
-          '   giờ   ' +
-          sovlingMinute +
-          '   phút' +
-          ',   ngày   ' +
-          sovlingDay +
-          '   tháng   ' +
-          sovlingMonth +
-          '   năm   ' +
-          sovlingYear
+            sovlingHour +
+            '   giờ   ' +
+            sovlingMinute +
+            '   phút' +
+            ',   ngày   ' +
+            sovlingDay +
+            '   tháng   ' +
+            sovlingMonth +
+            '   năm   ' +
+            sovlingYear
         )
         .moveDown(0.2)
         .text('Địa điểm:  ...........................................................................')
@@ -340,7 +340,7 @@ export class Violation {
 
   /**
    *
-   * @param {'day'|'week'|'month'|'year'} timeline
+   * @param {'day'|'week'|'month'|'year'|Date()} timeline
    * @param {'synthetic'|'finishReport'|'finishPenal'} status
    */
   getStatistical = async (timeline, status) => {
@@ -350,7 +350,7 @@ export class Violation {
       let statusSearch
       if (!_.isEmpty(timeline)) {
         if (timeline === 'day') {
-          let lastWeek = moment().subtract('days', 1).format('MM-DD-YYYY')
+          let lastWeek = moment().subtract(1, 'days').format('MM-DD-YYYY')
           timeEndSearch = new Date(lastWeek)
         } else if (timeline === 'week') {
           // function getLastWeek() {
@@ -367,17 +367,15 @@ export class Violation {
 
           // d.setFullYear(2020, 11, 3);
 
-          let lastWeek = moment().subtract('days', 7).format('MM-DD-YYYY')
+          let lastWeek = moment().subtract(7, 'days').format('MM-DD-YYYY')
           timeEndSearch = new Date(lastWeek)
-
         } else if (timeline === 'month') {
-          let lastWeek = moment().subtract('days', 30).format('MM-DD-YYYY')
+          let lastWeek = moment().subtract(30, 'days').format('MM-DD-YYYY')
           timeEndSearch = new Date(lastWeek)
-
         } else if (timeline === 'year') {
           let fullYear = currentDate.getFullYear() - 1
           timeEndSearch = new Date(currentDate.setFullYear(fullYear))
-        } else timeEndSearch = null
+        } else timeEndSearch = timeline
       }
 
       if (!_.isEmpty(status)) {
