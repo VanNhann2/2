@@ -25,7 +25,7 @@ export const isMongoIdArray = (ids) => {
 
 export const inObject = (object) => {
   if (object) {
-    let arrayObject = ['bike', 'car', 'bus', 'truck']
+    let arrayObject = ['bike', 'bus', 'car', 'miniBus', 'truck']
     return _.includes(arrayObject, object)
   }
 }

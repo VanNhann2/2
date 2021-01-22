@@ -10,7 +10,7 @@ export class ViolationModel extends BaseModel {
   // perPage = undefined
   constructor() {
     super('Objects', new BaseSchema(violationsSchema, schemaOptions))
-    this.perPage = 10
+    this.perPage = 30
   }
 
   /**
@@ -90,6 +90,9 @@ export class ViolationModel extends BaseModel {
           objectImages: replaceImage(item.objectImages),
           plateImages: replaceImage(item.plateImages),
           vioTime: item.vioTime,
+          email: item.email,
+          owner: item.owner,
+          phone: item.phone,
         }
         dataResutl.push(data)
       })
@@ -175,8 +178,36 @@ export class ViolationModel extends BaseModel {
     let [err, result] = await to(this.model.aggregate([match, project]))
     if (err) throw err
 
-    if (_.isEmpty(result)) return {}
-    return result[0]
+    const replaceImage = (image) => {
+      let arrayImage = []
+      _.forEach(image, function (item) {
+        arrayImage.push(replacePath(item))
+      })
+      return arrayImage
+    }
+
+    let dataResutl = []
+    if (!_.isEmpty(result)) {
+      _.forEach(result, function (item) {
+        let data = {
+          id: item.id,
+          action: item.action,
+          object: item.object,
+          status: item.status,
+          plate: item.plate,
+          camera: item.camera,
+          images: replaceImage(item.images),
+          objectImages: replaceImage(item.objectImages),
+          plateImages: replaceImage(item.plateImages),
+          vioTime: item.vioTime,
+          email: item.email,
+          owner: item.owner,
+          phone: item.phone,
+        }
+        dataResutl.push(data)
+      })
+      return dataResutl ? dataResutl : {}
+    }
   }
 
   /**

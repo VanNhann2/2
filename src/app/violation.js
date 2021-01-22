@@ -15,21 +15,17 @@ import { config } from '../configs'
 import moment from 'moment'
 
 export class Violation {
-  /** @type {GRpcClient} */
-  #grpcClient = undefined
-
-  // perPage = undefined
-  // arrayObject = []
-  // arrayStatus = []
+  // /** @type {GRpcClient} */
+  // #grpcClient = undefined
 
   constructor() {
     this.perPage = 10
-    this.arrayObject = ['bike', 'car', 'bus', 'truck']
+    this.arrayObject = ['bike', 'bus', 'car', 'miniBus', 'truck']
     this.arrayStatus = ['unapproved', 'approved', 'finishReport', 'finishPenal', 'expired']
     // const protoFile = path.join(__dirname, config.protoFile);
 
     // this.#grpcClient = new GRpcClient('10.49.46.251:50052', config.protoFile, 'parking.Camera')
-    this.#grpcClient = new GRpcClient('10.49.46.23:50055', config.protoFile, 'parking.Video')
+    // this.#grpcClient = new GRpcClient('10.49.46.23:50055', config.protoFile, 'parking.Video')
   }
 
   /**

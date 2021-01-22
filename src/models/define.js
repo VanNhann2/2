@@ -10,7 +10,7 @@ export const violationsSchema = {
   // action luon 3: loai vi pham
   // status la trang thai 0 la all , 1 là chưa duyệt, 2 là đã duyệt
   object: { type: Number, required: true },
-  status: { type: Number, enum: [0, 1, 2, 3, 4, 5], required: true },
+  status: { type: Number, enum: [0, 1, 2, 3, 4], required: true },
   plate: { type: String, required: true },
   camera: { type: mongoose.SchemaTypes.ObjectId, required: true },
   time: { type: Date },
