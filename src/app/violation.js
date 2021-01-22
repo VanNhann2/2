@@ -25,7 +25,7 @@ export class Violation {
   constructor() {
     this.perPage = 10
     this.arrayObject = ['bike', 'car', 'bus', 'truck']
-    this.arrayStatus = ['approved', 'unapproved', 'finishReport', 'finishPenal', 'expired']
+    this.arrayStatus = ['unapproved', 'approved', 'finishReport', 'finishPenal', 'expired']
     // const protoFile = path.join(__dirname, config.protoFile);
 
     // this.#grpcClient = new GRpcClient('10.49.46.251:50052', config.protoFile, 'parking.Camera')

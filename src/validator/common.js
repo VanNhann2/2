@@ -46,7 +46,7 @@ export const inStatusStatistical = (status) => {
 
 export const inStatus = (status) => {
   if (status) {
-    let arrayStatus = ['approved', 'unapproved', 'normal', 'finishReport', 'finishPenal', 'expired']
+    let arrayStatus = ['unapproved', 'approved', 'finishReport', 'finishPenal', 'expired']
     return _.includes(arrayStatus, status)
   }
   return true
