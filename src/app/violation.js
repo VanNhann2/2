@@ -109,15 +109,15 @@ export class Violation {
       // let [err, getByIdCam] = await to(this.#grpcClient.makeRequest('get', { ids: { c1: result.camera } }))
       // if (err) throw err
 
-      console.log(result)
+      // console.log(result)
 
-      let [err, getVideoByDate] = await to(this.#grpcClient.makeRequest1('get', { time: { c1: result.vioTime } }))
-      if (err) throw err
+      // let [err, getVideoByDate] = await to(this.#grpcClient.makeRequest1('get', { time: { c1: result.vioTime } }))
+      // if (err) throw err
 
-      console.log(getVideoByDate)
-      const dataResult = { ...result, ...getVideoByDate }
+      // console.log(getVideoByDate)
+      // const dataResult = { ...result, ...getVideoByDate }
 
-      return dataResult
+      return result
     } catch (error) {
       logger.error('Violations.getById() error:', error)
       throw new AppError({ code: StatusCodes.INTERNAL_SERVER_ERROR, message: 'Lấy thông tin vi phạm thất bại' })
