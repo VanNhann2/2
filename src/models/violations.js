@@ -206,7 +206,7 @@ export class ViolationModel extends BaseModel {
         }
         dataResutl.push(data)
       })
-      return dataResutl ? dataResutl : {}
+      return dataResutl[0] ? dataResutl[0] : {}
     }
   }
 
@@ -264,7 +264,7 @@ export class ViolationModel extends BaseModel {
     if (err) throw err
     return result
   }
-  timeEndSearch
+
   /**
    *
    * @param {mongoose.Types.ObjectId} id
