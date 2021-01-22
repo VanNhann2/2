@@ -54,7 +54,7 @@ export class ViolationModel extends BaseModel {
     // const addField = { $addFields: { id: '$_id' } }
     //const conditionsData = [match, project, { $addFields: { id: '$_id' } }, { $sort: { vio_time: -1 } }, { $skip: perPage * (page - 1) }, { $limit: perPage }]
     //const conditionsCount = [match, project, { $addFields: { id: '$_id' } }]
-    const conditionsData = [match, project, { $sort: { vio_time: -1 } }, { $skip: this.perPage * (page - 1) }, { $limit: this.perPage }]
+    const conditionsData = [match, project, { $sort: { vioTime: -1 } }, { $skip: this.perPage * (page - 1) }, { $limit: this.perPage }]
     const conditionsCount = [match]
 
     return { conditionsData, conditionsCount }
