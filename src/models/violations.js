@@ -261,6 +261,38 @@ export class ViolationModel extends BaseModel {
         { new: true }
       )
     )
+
+    const replaceImage = (image) => {
+      let arrayImage = []
+      _.forEach(image, function (item) {
+        arrayImage.push(replacePath(item))
+      })
+      return arrayImage
+    }
+
+    let dataResutl = []
+    if (!_.isEmpty(result)) {
+      _.forEach(result, function (item) {
+        let data = {
+          id: item.id || item._id,
+          action: item.action,
+          object: item.object,
+          status: item.status,
+          plate: item.plate,
+          camera: item.camera,
+          images: replaceImage(item.images),
+          objectImages: replaceImage(item.object_images),
+          plateImages: replaceImage(item.plate_images),
+          vioTime: item.vio_time,
+          email: item.email,
+          owner: item.owner,
+          phone: item.phone,
+        }
+        dataResutl.push(data)
+      })
+      return dataResutl[0] ? dataResutl[0] : {}
+    }
+
     if (err) throw err
     return result
   }
