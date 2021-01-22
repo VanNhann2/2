@@ -345,7 +345,6 @@ export class Violation {
    */
   getStatistical = async (date, timeline) => {
     try {
-      
       let dateSearch = new Date(date)
 
       let [err, result] = await to(model.violation.getStatistical(dateSearch, timeline))

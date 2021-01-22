@@ -3,11 +3,13 @@ import to from 'await-to-js'
 import _ from 'lodash'
 import { violationsSchema, schemaOptions } from './define'
 import { BaseModel, BaseSchema } from './base'
+import moment from 'moment'
+import { replacePath } from '../utils'
 
 export class ViolationModel extends BaseModel {
   // perPage = undefined
   constructor() {
-    super('Violations', new BaseSchema(violationsSchema, schemaOptions))
+    super('Objects', new BaseSchema(violationsSchema, schemaOptions))
     this.perPage = 10
   }
 
@@ -42,7 +44,7 @@ export class ViolationModel extends BaseModel {
         time: 1,
         images: 1,
         objectImages: '$object_images',
-        plagteImages: '$plate_images',
+        plateImages: '$plate_images',
         vioTime: '$vio_time',
         email: 1,
         owner: 1,
@@ -65,7 +67,34 @@ export class ViolationModel extends BaseModel {
   getAll = async (conditions) => {
     let [err, result] = await to(this.model.aggregate(conditions))
     if (err) throw err
-    return result
+
+    const replaceImage = (image) => {
+      let arrayImage = []
+      _.forEach(image, function (item) {
+        arrayImage.push(replacePath(item))
+      })
+      return arrayImage
+    }
+
+    let dataResutl = []
+    if (!_.isEmpty(result)) {
+      _.forEach(result, function (item) {
+        let data = {
+          id: item.id,
+          action: item.action,
+          object: item.object,
+          status: item.status,
+          plate: item.plate,
+          camera: item.camera,
+          images: replaceImage(item.images),
+          objectImages: replaceImage(item.objectImages),
+          plateImages: replaceImage(item.plateImages),
+          vioTime: item.vioTime,
+        }
+        dataResutl.push(data)
+      })
+      return dataResutl
+    }
   }
 
   /**
@@ -235,31 +264,52 @@ export class ViolationModel extends BaseModel {
    * @param {Number} status
    */
   getStatistical = async (date, timeline) => {
-    const otherCondition = { deleted: { $ne: true } }
-    const sortDateChose = _.isEmpty(_.toString(date)) ? {} : { $or: [{ vio_time: { $lte: new Date(date) } }] }
-    const match = {
-      $match: { $and: [otherCondition, sortDateChose] },
-    }
-
-    const group = {
-      $group: {
-        _id: { year: { $year: "$vio_time" }, month: { $month: "$vio_time" }, day: { $dayOfMonth: "$vio_time" }, status: '$status' },
-        count: { $sum: 1 },
-        date: { $first: '$vio_time' },
-      },
-    }
-
-    const project = {
-      $project: {
-        date: '$_id',
-        count: 1,
-        _id: 0
-      },
-    }
-
-    let [err, result] = await to(this.model.aggregate([match, group, project]))
-    if (err) throw err
-
-    return result
+    // console.log({ date })
+    // const endDate = new Date('2020-12-12T17:00:00.000Z')
+    // const otherCondition = { deleted: { $ne: true } }
+    // const sortDateChose = _.isEmpty(_.toString(date)) ? {} : { $or: [{ vio_time: { $lte: new Date(date) } }] }
+    // let [err, result] = await to(
+    //   this.model.aggregate([
+    //     {
+    //       $match: { $and: [otherCondition, sortDateChose] },
+    //     },
+    //     {
+    //       $addFields: {
+    //         saleDate: { $dateFromParts: { year: { $year: '$vio_time' }, month: { $month: '$vio_time' }, day: { $dayOfMonth: '$vio_time' } } },
+    //         dateRange: {
+    //           $map: {
+    //             input: { $range: [0, { $subtract: [date, endDate] }, 1000 * 60 * 60 * 24] },
+    //             in: { $add: [date, '$$this'] },
+    //           },
+    //         },
+    //       },
+    //     },
+    //     { $unwind: '$dateRange' },
+    //     {
+    //       $group: {
+    //         _id: { date: '$dateRange', make: '$status' },
+    //         count: { $sum: { $cond: [{ $eq: ['$dateRange', '$vio_time'] }, 1, 0] } },
+    //       },
+    //     },
+    //     {
+    //       $group: {
+    //         _id: '$_id.date',
+    //         total: { $sum: '$count' },
+    //         byBrand: { $push: { k: '$_id.make', v: { $sum: '$count' } } },
+    //       },
+    //     },
+    //     { $sort: { _id: 1 } },
+    //     {
+    //       $project: {
+    //         _id: 0,
+    //         saleDate: '$_id',
+    //         totalSold: '$total',
+    //         byBrand: { $arrayToObject: { $filter: { input: '$byBrand', cond: '$$this.v' } } },
+    //       },
+    //     },
+    //   ])
+    // )
+    // if (err) throw err
+    // return result
   }
 }

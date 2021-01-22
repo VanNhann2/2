@@ -24,8 +24,3 @@ export const violationsSchema = {
   email: { type: String },
   deleted: { type: Boolean },
 }
-
-export const statisticalSchema = {
-  stage: { type: String, required: true },
-  type: { type: String, required: true }
-}
