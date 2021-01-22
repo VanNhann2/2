@@ -125,8 +125,8 @@ export class ViolationModel extends BaseModel {
 
     const project = {
       $project: {
-        _id: 0,
         id: '$_id',
+        _id: 0,
         action: 1,
         object: 1,
         status: 1,
@@ -243,11 +243,7 @@ export class ViolationModel extends BaseModel {
 
     const group = {
       $group: {
-        _id: {
-          day: { $dayOfMonth: '$vio_time' },
-          month: { $month: '$vio_time' },
-          year: { $year: '$vio_time' },
-        },
+        _id: { year: { $year: "$vio_time" }, month: { $month: "$vio_time" }, day: { $dayOfMonth: "$vio_time" }, status: '$status' },
         count: { $sum: 1 },
         date: { $first: '$vio_time' },
       },
@@ -255,12 +251,13 @@ export class ViolationModel extends BaseModel {
 
     const project = {
       $project: {
-        date: { $dateToString: { format: '%Y-%m-%d', date: '$date' } },
+        date: '$_id',
         count: 1,
+        _id: 0
       },
     }
 
-    let [err, result] = await to(this.model.aggregate([match, group, project, { $sort: { _id: -1 } }, { $limit: 15 }]))
+    let [err, result] = await to(this.model.aggregate([match, group, project]))
     if (err) throw err
 
     return result
