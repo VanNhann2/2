@@ -57,17 +57,18 @@ export class Violation {
       const dataPromise = model.violation.getAll(conditions.conditionsData)
       const countPromise = model.violation.getCount(conditions.conditionsCount)
 
-      let pageData = [],
+      let page = [],
         total = 0
       let [errPromise, results] = await to(Promise.all([dataPromise, countPromise]))
       if (errPromise) throw errPromise
 
-      pageData = results[0]
+      page = results[0]
       total = results[1]
 
-      const totalRecord = total[0]?.myCount
-      const totalPage = Math.ceil(totalRecord / this.perPage)
+      const totalRecord = total[0]?.myCount || 0
+      const totalPage = Math.ceil(totalRecord / this.perPage) || 0
 
+      let pageData = page ? page : []
       return {
         pageData,
         totalRecord,
