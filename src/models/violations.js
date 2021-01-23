@@ -244,23 +244,39 @@ export class ViolationModel extends BaseModel {
    * @param {String} vioPhone
    * @param {String} vioEmail
    */
-  editViolation = async (id, vioStatus, vioObject, vioPlate, vioOwner, vioPhone, vioEmail) => {
+  editViolation = async (id, dataChange) => {
+    // let vioStatusUpdate = !_.isEmpty(_.toString(vioStatus)) ? vioStatus : undefined
+    // let vioObjectUpdate = !_.isEmpty(_.toString(vioObject)) ? vioObject : undefined
+    // let vioPlateUpdate = !_.isEmpty(_.toString(vioPlate)) ? vioPlate : undefined
+    // let vioOwnerUpdate = !_.isEmpty(_.toString(vioOwner)) ? vioOwner : undefined
+    // let vioPhoneUpdate = !_.isEmpty(_.toString(vioPhone)) ? vioPhone : undefined
+    // let vioEmailUpdate = !_.isEmpty(_.toString(vioEmail)) ? vioEmail : undefined
+
+    // if(vioStatusUpdate){
+    //   let [err, result] = await to(
+    //     this.model.findByIdAndUpdate(
+    //       id,
+    //       {
+    //         $set: {
+    //           status: status,
+    //         },
+    //       },
+    //       { new: true }
+    //     )
+    //   )
+    // }
+    console.log({ dataChange })
+
     let [err, result] = await to(
       this.model.findByIdAndUpdate(
         id,
         {
-          $set: {
-            status: vioStatus,
-            object: vioObject,
-            plate: vioPlate,
-            owner: vioOwner,
-            phone: vioPhone,
-            email: vioEmail,
-          },
+          $set: dataChange,
         },
         { new: true }
       )
     )
+    if (err) throw err
 
     const replaceImage = (image) => {
       let arrayImage = []
@@ -272,29 +288,25 @@ export class ViolationModel extends BaseModel {
 
     let dataResutl = []
     if (!_.isEmpty(result)) {
-      _.forEach(result, function (item) {
-        let data = {
-          id: item.id || item._id,
-          action: item.action,
-          object: item.object,
-          status: item.status,
-          plate: item.plate,
-          camera: item.camera,
-          images: replaceImage(item.images),
-          objectImages: replaceImage(item.object_images),
-          plateImages: replaceImage(item.plate_images),
-          vioTime: item.vio_time,
-          email: item.email,
-          owner: item.owner,
-          phone: item.phone,
-        }
-        dataResutl.push(data)
-      })
-      return dataResutl[0] ? dataResutl[0] : {}
+      let data = {
+        id: result._id,
+        action: result.action,
+        object: result.object,
+        status: result.status,
+        plate: result.plate,
+        camera: result.camera,
+        images: replaceImage(result.images),
+        objectImages: replaceImage(result.object_images),
+        plateImages: replaceImage(result.plate_images),
+        vioTime: result.vio_time,
+        email: result.email,
+        owner: result.owner,
+        phone: result.phone,
+      }
+      dataResutl = data
     }
-
-    if (err) throw err
-    return result
+    console.log({ dataResutl })
+    return dataResutl ? dataResutl : {}
   }
 
   /**

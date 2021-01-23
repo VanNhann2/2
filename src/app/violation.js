@@ -158,14 +158,21 @@ export class Violation {
    */
   editViolation = async (id, status, object, plate, owner, phone, email) => {
     try {
-      const vioStatus = _.includes(this.arrayStatus, status) ? _.indexOf(this.arrayStatus, status) + 1 : undefined
-      const vioObject = _.includes(this.arrayObject, object) ? _.indexOf(this.arrayObject, object) : undefined
-      const vioPlate = plate ? plate : undefined
-      const vioOwner = owner ? owner : undefined
-      const vioPhone = phone ? phone : undefined
-      const vioEmail = email ? email : undefined
+      let dataChange = {}
+      if (status) dataChange.status = _.includes(this.arrayStatus, status) ? _.indexOf(this.arrayStatus, status) + 1 : undefined
+      if (object) dataChange.object = _.includes(this.arrayObject, object) ? _.indexOf(this.arrayObject, object) : undefined
+      if (plate) dataChange.plate = plate
+      if (owner) dataChange.owner = owner
+      if (phone) dataChange.phone = phone
+      if (email) dataChange.email = email
+      // const vioStatus = _.includes(this.arrayStatus, status) ? _.indexOf(this.arrayStatus, status) + 1 : undefined
+      // const vioObject = _.includes(this.arrayObject, object) ? _.indexOf(this.arrayObject, object) : undefined
+      // const vioPlate = plate ? plate : undefined
+      // const vioOwner = owner ? owner : undefined
+      // const vioPhone = phone ? phone : undefined
+      // const vioEmail = email ? email : undefined
 
-      let [err, result] = await to(model.violation.editViolation(id, vioStatus, vioObject, vioPlate, vioOwner, vioPhone, vioEmail))
+      let [err, result] = await to(model.violation.editViolation(id, dataChange))
       if (err) throw err
 
       return result
@@ -186,6 +193,7 @@ export class Violation {
    */
   report = async (id, vioAddress, vioOwner, addressOwner, res, sovlingDate) => {
     try {
+      console.log({ sovlingDate })
       const ownerReport = vioOwner ? vioOwner : ''
       const addressOwnerReport = addressOwner ? addressOwner : ''
       const vioAddressReport = vioAddress ? vioAddress : ''
@@ -193,9 +201,11 @@ export class Violation {
       let [err, violation] = await to(model.violation.getById(id))
       if (err) throw err
 
+      console.log({ violation })
+
       let vioObject = _.indexOf(this.arrayObject, violation.object)
 
-      const date = new Date(violation.vio_time)
+      const date = new Date(violation.vioTime)
       const getHour = date.getHours()
       const vioHour = ('0' + getHour).slice(-2)
       const getMinutes = date.getMinutes()
@@ -210,6 +220,8 @@ export class Violation {
       const sovlingDay = sovlingDateReport.getDate()
       const sovlingMonth = sovlingDateReport.getMonth() + 1
       const sovlingYear = sovlingDateReport.getFullYear()
+
+      console.log({ sovlingHour })
 
       const doc = new PDFDocument({
         size: 'A5',
@@ -274,17 +286,17 @@ export class Violation {
         .text('Yêu cầu chủ phương tiện (lái xe) đến Thanh tra Sở Giao Thông vận tải thành phố Đà Nẵng để giải quyết vi phạm theo quy định.')
         .moveDown(0.2)
         .text(
-          'Vào lúc:    ' +
-            sovlingHour +
-            '   giờ   ' +
-            sovlingMinute +
-            '   phút' +
-            ',   ngày   ' +
-            sovlingDay +
-            '   tháng   ' +
-            sovlingMonth +
-            '   năm   ' +
-            sovlingYear
+          'Vào lúc:    ' + sovlingHour
+            ? sovlingHour
+            : '' + '   giờ   ' + sovlingMinute
+            ? sovlingMinute
+            : '' + '   phút' + ',   ngày   ' + sovlingDay
+            ? sovlingDay
+            : '' + '   tháng   ' + sovlingMonth
+            ? sovlingMonth
+            : '' + '   năm   ' + sovlingYear
+            ? sovlingYear
+            : ''
         )
         .moveDown(0.2)
         .text('Địa điểm:  ...........................................................................')
@@ -297,7 +309,7 @@ export class Violation {
       doc.end()
 
       res.setHeader('Content-Type', 'application/pdf')
-      res.setHeader('X-Filename', +vioDate + '-' + vioMonth + '-' + vioYear + '_' + violation.plate + '.pdf')
+      res.setHeader('X-Filename', vioDate + '-' + vioMonth + '-' + vioYear + '_' + violation.plate + '.pdf')
       doc.pipe(res)
 
       await to(model.violation.updatedStatus(id, 'finishReport'))
