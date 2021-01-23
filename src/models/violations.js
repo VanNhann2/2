@@ -4,7 +4,7 @@ import _ from 'lodash'
 import { violationsSchema, schemaOptions } from './define'
 import { BaseModel, BaseSchema } from './base'
 import moment from 'moment'
-import { replacePath } from '../utils'
+import { replacePath, replaceImage } from '../utils'
 import { config } from '../configs'
 
 export class ViolationModel extends BaseModel {
@@ -81,14 +81,6 @@ export class ViolationModel extends BaseModel {
     let [err, result] = await to(this.model.aggregate(conditions))
     if (err) throw err
 
-    const replaceImage = (image) => {
-      let arrayImage = []
-      _.forEach(image, function (item) {
-        arrayImage.push(replacePath(item))
-      })
-      return arrayImage
-    }
-
     let dataResutl = []
     if (!_.isEmpty(result)) {
       _.forEach(result, function (item) {
@@ -124,10 +116,8 @@ export class ViolationModel extends BaseModel {
   }
 
   getAllPublic = async (plate) => {
-    console.log(plate)
     const otherCondition = { deleted: { $ne: true } }
     const plateCondition = _.isEmpty(plate) ? {} : { $or: [{ plate: plate }] }
-    console.log(plateCondition)
     const match = { $match: { $and: [plateCondition, otherCondition] } }
 
     const project = {
@@ -152,7 +142,46 @@ export class ViolationModel extends BaseModel {
     let [err, result] = await to(this.model.aggregate([match, project]))
     if (err) throw err
 
-    return result
+    let dataResutl = []
+    if (!_.isEmpty(result)) {
+      _.forEach(result, function (item) {
+        let data = {
+          id: item.id,
+          violationType: item.action === 3 ? 'Đỗ xe sai quy định' : '',
+          vehicleType:
+            item.object === 0
+              ? 'Mô tô'
+              : item.object === 1
+              ? 'Ô tô khách trên 16 chỗ'
+              : item.object === 2
+              ? 'Ô tô con'
+              : item.object === 3
+              ? 'Ô tô khách 16 chỗ'
+              : 'Ô tô tải',
+          status:
+            item.status === 1
+              ? 'Chưa duyệt'
+              : item.status === 2
+              ? 'Đã duyệt'
+              : item.status === 3
+              ? 'Đã xuất biên bản'
+              : item.status === 4
+              ? 'Đã hoàn thành xử phạt'
+              : 'Quá hạn',
+          numberPlate: item.plate,
+          camera: { id: item.camera },
+          images: !_.isEmpty(replaceImage(item.images)) ? config.LinkImageMobile + replaceImage(item.images) : [],
+          objectImages: !_.isEmpty(replaceImage(item.objectImages)) ? config.LinkImageMobile + replaceImage(item.objectImages) : [],
+          plateImages: !_.isEmpty(replaceImage(item.plateImages)) ? config.LinkImageMobile + replaceImage(item.plateImages) : [],
+          vioTime: item.vioTime,
+          email: item.email,
+          owner: item.owner,
+          phone: item.phone,
+        }
+        dataResutl.push(data)
+      })
+      return dataResutl
+    }
   }
 
   /**
@@ -269,14 +298,6 @@ export class ViolationModel extends BaseModel {
     )
     if (err) throw err
 
-    const replaceImage = (image) => {
-      let arrayImage = []
-      _.forEach(image, function (item) {
-        arrayImage.push(replacePath(item))
-      })
-      return arrayImage
-    }
-
     let dataResutl = []
     if (!_.isEmpty(result)) {
       let data = {
@@ -331,12 +352,16 @@ export class ViolationModel extends BaseModel {
    */
   getStatistical = async (date, timeline) => {
     console.log({ date })
-
+    let page = 1
     let arrDate = []
-    for (let i = 1; i < 20; i++) {
+    for (let i = 1; i < 5; i++) {
       let dateSubtract = moment(date).subtract(i, 'days').format('MM-DD-YYYY')
       arrDate.push(dateSubtract)
     }
+    console.log(arrDate)
+    arrDate = arrDate.map((arr) => {
+      return new Date(arr)
+    })
     // const startDate = new Date(date)
     // const endDate = new Date('2020-12-20T17:00:00.000Z')
     // const sortDateChose = _.isEmpty(_.toString(date)) ? {} : { $or: [{ vio_time: { $gte: new Date(startDate), $lt: new Date(endDate) } }] }
@@ -348,7 +373,11 @@ export class ViolationModel extends BaseModel {
 
     const group = {
       $group: {
-        _id: '$vio_time',
+        _id: {
+          day: { $dayOfMonth: '$vio_time' },
+          month: { $month: '$vio_time' },
+          year: { $year: '$vio_time' },
+        },
         status1: {
           $sum: { $cond: [{ $eq: ['$status', 1] }, 1, 0] },
         },
@@ -375,7 +404,16 @@ export class ViolationModel extends BaseModel {
       },
     }
 
-    let [err, result] = await to(this.model.aggregate([match, group, project]))
+    let [err, result] = await to(
+      this.model.aggregate([
+        match,
+        group,
+        project,
+        { $sort: { _id: -1 } },
+        { $skip: _.toNumber(config.limitPerPage) * (page - 1) },
+        { $limit: _.toNumber(config.limitPerPage) },
+      ])
+    )
     if (err) throw err
 
     return result

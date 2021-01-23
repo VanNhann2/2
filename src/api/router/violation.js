@@ -43,7 +43,7 @@ export const violationRouter = (router) => {
     }
   })
 
-  router.post('/public/violation', async (req, res, next) => {
+  router.post('/public/violations', async (req, res, next) => {
     try {
       const { plate } = req.body
 
