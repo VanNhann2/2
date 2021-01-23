@@ -9,7 +9,7 @@ import { replacePath } from '../utils'
 export class ViolationModel extends BaseModel {
   // perPage = undefined
   constructor() {
-    super('Objects', new BaseSchema(violationsSchema, schemaOptions))
+    super('Violations', new BaseSchema(violationsSchema, schemaOptions))
     this.perPage = 30
   }
 
@@ -339,52 +339,66 @@ export class ViolationModel extends BaseModel {
    * @param {Number} status
    */
   getStatistical = async (date, timeline) => {
-    // console.log({ date })
-    // const endDate = new Date('2020-12-12T17:00:00.000Z')
-    // const otherCondition = { deleted: { $ne: true } }
-    // const sortDateChose = _.isEmpty(_.toString(date)) ? {} : { $or: [{ vio_time: { $lte: new Date(date) } }] }
-    // let [err, result] = await to(
-    //   this.model.aggregate([
-    //     {
-    //       $match: { $and: [otherCondition, sortDateChose] },
-    //     },
-    //     {
-    //       $addFields: {
-    //         saleDate: { $dateFromParts: { year: { $year: '$vio_time' }, month: { $month: '$vio_time' }, day: { $dayOfMonth: '$vio_time' } } },
-    //         dateRange: {
-    //           $map: {
-    //             input: { $range: [0, { $subtract: [date, endDate] }, 1000 * 60 * 60 * 24] },
-    //             in: { $add: [date, '$$this'] },
-    //           },
-    //         },
-    //       },
-    //     },
-    //     { $unwind: '$dateRange' },
-    //     {
-    //       $group: {
-    //         _id: { date: '$dateRange', make: '$status' },
-    //         count: { $sum: { $cond: [{ $eq: ['$dateRange', '$vio_time'] }, 1, 0] } },
-    //       },
-    //     },
-    //     {
-    //       $group: {
-    //         _id: '$_id.date',
-    //         total: { $sum: '$count' },
-    //         byBrand: { $push: { k: '$_id.make', v: { $sum: '$count' } } },
-    //       },
-    //     },
-    //     { $sort: { _id: 1 } },
-    //     {
-    //       $project: {
-    //         _id: 0,
-    //         saleDate: '$_id',
-    //         totalSold: '$total',
-    //         byBrand: { $arrayToObject: { $filter: { input: '$byBrand', cond: '$$this.v' } } },
-    //       },
-    //     },
-    //   ])
-    // )
-    // if (err) throw err
-    // return result
+    console.log({ date })
+
+    let arrDate = []
+    for (let i = 1; i < 20; i++) {
+      let dateSubtract = moment(date).subtract(i, 'days').format('MM-DD-YYYY');
+      arrDate.push(dateSubtract)
+    }
+    // const startDate = new Date(date)
+    // const endDate = new Date('2020-12-20T17:00:00.000Z')
+    // const sortDateChose = _.isEmpty(_.toString(date)) ? {} : { $or: [{ vio_time: { $gte: new Date(startDate), $lt: new Date(endDate) } }] }
+    const otherCondition = { deleted: { $ne: true } }
+    const sortDateChose = _.isEmpty(_.toString(date)) ? {} : { $or: [{ vio_time: { $lt: new Date(date) } }] }
+    const match = {
+      $match: { $and: [otherCondition, sortDateChose] },
+    }
+
+    const group = {
+      $group: {
+        _id: "$vio_time",
+        status1: {
+          $sum:
+            { $cond: [{ $eq: ["$status", 1] }, 1, 0] }
+        },
+        status2: {
+          $sum:
+            { $cond: [{ $eq: ["$status", 2] }, 1, 0] }
+        },
+        status3: {
+          $sum:
+            { $cond: [{ $eq: ["$status", 3] }, 1, 0] }
+        },
+        status4: {
+          $sum:
+            { $cond: [{ $eq: ["$status", 4] }, 1, 0] }
+        }
+      }
+    }
+
+    const project = {
+      $project: {
+        date: "$_id",
+        status1: 1,
+        status2: 1,
+        status3: 1,
+        status4: 1,
+        _id: 0
+      }
+    }
+
+    let [err, result] = await to(
+      this.model.aggregate([
+        match,
+        group,
+        project,
+      ])
+    )
+    if (err) throw err
+
+
+
+    return result
   }
 }
