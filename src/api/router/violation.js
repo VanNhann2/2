@@ -12,11 +12,16 @@ import * as validator from '../../validator'
 export const violationRouter = (router) => {
   router.post('/violation', async (req, res, next) => {
     try {
-      // const { page } = req.query
-      const { object, status, plate, startDate, endDate, page } = req.body
+      const { idsCamera, object, status, plate, startDate, endDate, page } = req.body
       //check page
       if (_.isEmpty(page)) {
         throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Số trang không hợp lệ' })
+      }
+
+      if (idsCamera) {
+        if (!validator.isMongoIdArray(idsCamera)) {
+          throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'idsCamera vi phạm phải là một mảng' })
+        }
       }
 
       if (object && !_.isEmpty(object)) {
@@ -31,7 +36,7 @@ export const violationRouter = (router) => {
         }
       }
 
-      const result = await app.violation.getAll(object, status, plate, startDate, endDate, page)
+      const result = await app.violation.getAll(idsCamera, object, status, plate, startDate, endDate, page)
       res.json(result)
     } catch (error) {
       next(error)

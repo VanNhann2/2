@@ -31,6 +31,7 @@ const violationConfig = {
   pathVideo: process.env.PATH_VIDEO_VIOLATION,
   pathImage: process.env.IMAGE_FOLDER,
   replacePathImage: process.env.IMAGE_FILE_PREFIX,
+  limitPerPage: process.env.LIMIT_PER_PAGE,
 }
 
 export const config = {

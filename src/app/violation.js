@@ -38,7 +38,7 @@ export class Violation {
    * @param {String} page
    */
   /** Get all violations */
-  getAll = async (object, status, plate, startDate, endDate, page) => {
+  getAll = async (idsCamera, object, status, plate, startDate, endDate, page) => {
     try {
       // let perPage = 10
       let vioObject = _.includes(this.arrayObject, object) ? _.indexOf(this.arrayObject, object) : undefined
@@ -47,24 +47,24 @@ export class Violation {
       const vioPlate = plate ? plate : undefined
       const startSearchDate = startDate && startDate != '' && startDate != 'null' ? new Date(startDate).toISOString() : undefined
       const endSearchDate = endDate && endDate != '' && endDate != 'null' ? new Date(endDate).toISOString() : undefined
-      let [err, conditions] = await to(model.violation.conditions(vioObject, vioStatus, vioPlate, startSearchDate, endSearchDate, page))
+      let [err, conditions] = await to(model.violation.conditions(idsCamera, vioObject, vioStatus, vioPlate, startSearchDate, endSearchDate, page))
       if (err) throw err
 
       const dataPromise = model.violation.getAll(conditions.conditionsData)
       const countPromise = model.violation.getCount(conditions.conditionsCount)
 
-      let page = [],
+      let pageDt = [],
         total = 0
       let [errPromise, results] = await to(Promise.all([dataPromise, countPromise]))
       if (errPromise) throw errPromise
 
-      page = results[0]
+      pageDt = results[0]
       total = results[1]
 
       const totalRecord = total[0]?.myCount || 0
       const totalPage = Math.ceil(totalRecord / this.perPage) || 0
 
-      let pageData = page ? page : []
+      let pageData = pageDt ? pageDt : []
       return {
         pageData,
         totalRecord,
@@ -165,12 +165,6 @@ export class Violation {
       if (owner) dataChange.owner = owner
       if (phone) dataChange.phone = phone
       if (email) dataChange.email = email
-      // const vioStatus = _.includes(this.arrayStatus, status) ? _.indexOf(this.arrayStatus, status) + 1 : undefined
-      // const vioObject = _.includes(this.arrayObject, object) ? _.indexOf(this.arrayObject, object) : undefined
-      // const vioPlate = plate ? plate : undefined
-      // const vioOwner = owner ? owner : undefined
-      // const vioPhone = phone ? phone : undefined
-      // const vioEmail = email ? email : undefined
 
       let [err, result] = await to(model.violation.editViolation(id, dataChange))
       if (err) throw err
@@ -193,15 +187,12 @@ export class Violation {
    */
   report = async (id, vioAddress, vioOwner, addressOwner, res, sovlingDate) => {
     try {
-      console.log({ sovlingDate })
       const ownerReport = vioOwner ? vioOwner : ''
       const addressOwnerReport = addressOwner ? addressOwner : ''
       const vioAddressReport = vioAddress ? vioAddress : ''
 
       let [err, violation] = await to(model.violation.getById(id))
       if (err) throw err
-
-      console.log({ violation })
 
       let vioObject = _.indexOf(this.arrayObject, violation.object)
 
@@ -220,8 +211,6 @@ export class Violation {
       const sovlingDay = sovlingDateReport.getDate()
       const sovlingMonth = sovlingDateReport.getMonth() + 1
       const sovlingYear = sovlingDateReport.getFullYear()
-
-      console.log({ sovlingHour })
 
       const doc = new PDFDocument({
         size: 'A5',

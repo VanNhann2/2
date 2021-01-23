@@ -5,12 +5,12 @@ import { violationsSchema, schemaOptions } from './define'
 import { BaseModel, BaseSchema } from './base'
 import moment from 'moment'
 import { replacePath } from '../utils'
+import { config } from '../configs'
 
 export class ViolationModel extends BaseModel {
   // perPage = undefined
   constructor() {
-    super('Violations', new BaseSchema(violationsSchema, schemaOptions))
-    this.perPage = 30
+    super('Objects', new BaseSchema(violationsSchema, schemaOptions))
   }
 
   /**
@@ -22,15 +22,22 @@ export class ViolationModel extends BaseModel {
    * @param {Date} endSearchDate
    * @param {Number} page
    */
-  conditions = async (vioObject, vioStatus, vioPlate, startSearchDate, endSearchDate, page) => {
-    // let perPage = 10
+  conditions = async (idsCamera, vioObject, vioStatus, vioPlate, startSearchDate, endSearchDate, page) => {
+    const arrIds = []
+    if (!_.isEmpty(idsCamera)) {
+      for (let id of idsCamera) {
+        arrIds.push(mongoose.Types.ObjectId(id))
+      }
+    }
+    let idsCameraCondition = _.isEmpty(idsCamera) ? {} : { $or: [{ camera: { $in: arrIds } }] }
+
     const objectCondition = _.isEmpty(_.toString(vioObject)) ? {} : { $or: [{ object: vioObject }] }
     const statusCondition = _.isEmpty(_.toString(vioStatus)) ? {} : { $or: [{ status: vioStatus }] }
     const plateCondition = _.isEmpty(vioPlate) ? {} : { $or: [{ plate: vioPlate }] }
     const searchDateCondition =
       _.isEmpty(startSearchDate) && _.isEmpty(endSearchDate) ? {} : { $or: [{ vio_time: { $gte: new Date(startSearchDate), $lte: new Date(endSearchDate) } }] }
     const otherCondition = { deleted: { $ne: true } }
-    const match = { $match: { $and: [objectCondition, statusCondition, plateCondition, searchDateCondition, otherCondition] } }
+    const match = { $match: { $and: [idsCameraCondition, objectCondition, statusCondition, plateCondition, searchDateCondition, otherCondition] } }
 
     const project = {
       $project: {
@@ -54,7 +61,13 @@ export class ViolationModel extends BaseModel {
     // const addField = { $addFields: { id: '$_id' } }
     //const conditionsData = [match, project, { $addFields: { id: '$_id' } }, { $sort: { vio_time: -1 } }, { $skip: perPage * (page - 1) }, { $limit: perPage }]
     //const conditionsCount = [match, project, { $addFields: { id: '$_id' } }]
-    const conditionsData = [match, project, { $sort: { vioTime: -1 } }, { $skip: this.perPage * (page - 1) }, { $limit: this.perPage }]
+    const conditionsData = [
+      match,
+      project,
+      { $sort: { vioTime: -1 } },
+      { $skip: _.toNumber(config.limitPerPage) * (page - 1) },
+      { $limit: _.toNumber(config.limitPerPage) },
+    ]
     const conditionsCount = [match]
 
     return { conditionsData, conditionsCount }
@@ -245,28 +258,6 @@ export class ViolationModel extends BaseModel {
    * @param {String} vioEmail
    */
   editViolation = async (id, dataChange) => {
-    // let vioStatusUpdate = !_.isEmpty(_.toString(vioStatus)) ? vioStatus : undefined
-    // let vioObjectUpdate = !_.isEmpty(_.toString(vioObject)) ? vioObject : undefined
-    // let vioPlateUpdate = !_.isEmpty(_.toString(vioPlate)) ? vioPlate : undefined
-    // let vioOwnerUpdate = !_.isEmpty(_.toString(vioOwner)) ? vioOwner : undefined
-    // let vioPhoneUpdate = !_.isEmpty(_.toString(vioPhone)) ? vioPhone : undefined
-    // let vioEmailUpdate = !_.isEmpty(_.toString(vioEmail)) ? vioEmail : undefined
-
-    // if(vioStatusUpdate){
-    //   let [err, result] = await to(
-    //     this.model.findByIdAndUpdate(
-    //       id,
-    //       {
-    //         $set: {
-    //           status: status,
-    //         },
-    //       },
-    //       { new: true }
-    //     )
-    //   )
-    // }
-    console.log({ dataChange })
-
     let [err, result] = await to(
       this.model.findByIdAndUpdate(
         id,
@@ -343,7 +334,7 @@ export class ViolationModel extends BaseModel {
 
     let arrDate = []
     for (let i = 1; i < 20; i++) {
-      let dateSubtract = moment(date).subtract(i, 'days').format('MM-DD-YYYY');
+      let dateSubtract = moment(date).subtract(i, 'days').format('MM-DD-YYYY')
       arrDate.push(dateSubtract)
     }
     // const startDate = new Date(date)
@@ -357,47 +348,35 @@ export class ViolationModel extends BaseModel {
 
     const group = {
       $group: {
-        _id: "$vio_time",
+        _id: '$vio_time',
         status1: {
-          $sum:
-            { $cond: [{ $eq: ["$status", 1] }, 1, 0] }
+          $sum: { $cond: [{ $eq: ['$status', 1] }, 1, 0] },
         },
         status2: {
-          $sum:
-            { $cond: [{ $eq: ["$status", 2] }, 1, 0] }
+          $sum: { $cond: [{ $eq: ['$status', 2] }, 1, 0] },
         },
         status3: {
-          $sum:
-            { $cond: [{ $eq: ["$status", 3] }, 1, 0] }
+          $sum: { $cond: [{ $eq: ['$status', 3] }, 1, 0] },
         },
         status4: {
-          $sum:
-            { $cond: [{ $eq: ["$status", 4] }, 1, 0] }
-        }
-      }
+          $sum: { $cond: [{ $eq: ['$status', 4] }, 1, 0] },
+        },
+      },
     }
 
     const project = {
       $project: {
-        date: "$_id",
+        date: '$_id',
         status1: 1,
         status2: 1,
         status3: 1,
         status4: 1,
-        _id: 0
-      }
+        _id: 0,
+      },
     }
 
-    let [err, result] = await to(
-      this.model.aggregate([
-        match,
-        group,
-        project,
-      ])
-    )
+    let [err, result] = await to(this.model.aggregate([match, group, project]))
     if (err) throw err
-
-
 
     return result
   }
