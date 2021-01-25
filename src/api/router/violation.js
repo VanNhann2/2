@@ -214,7 +214,7 @@ export const violationRouter = (router) => {
 
   router.post('/statistical', async (req, res, next) => {
     try {
-      const { date, timeline } = req.body
+      const { day, timeline } = req.body
 
       // if (timeline && !_.isEmpty(timeline)) {
       //   if (!validator.inTimeline(timeline)) {
@@ -222,7 +222,7 @@ export const violationRouter = (router) => {
       //   }
       // }
 
-      const result = await app.violation.getStatistical(date, timeline)
+      const result = await app.violation.getStatistical(day, timeline)
 
       res.json(result)
     } catch (error) {

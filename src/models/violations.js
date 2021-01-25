@@ -273,72 +273,174 @@ export class ViolationModel extends BaseModel {
    * @param {Date()} timeEndSearch
    * @param {Number} status
    */
-  getStatistical = async (date, timeline) => {
-    console.log({ date })
+  getStatistical = async (dateSearch, timeline) => {
+    console.log({ dateSearch })
     let page = 1
     let arrDate = []
-    for (let i = 1; i < 5; i++) {
-      let dateSubtract = moment(date).subtract(i, 'days').format('MM-DD-YYYY')
+    for (let i = 0; i < 10; i++) {
+      let dateSubtract = moment(dateSearch).subtract(i, 'days').format('YYYY-MM-DD')
       arrDate.push(dateSubtract)
     }
-    console.log(arrDate)
-    arrDate = arrDate.map((arr) => {
-      return new Date(arr)
-    })
+    // console.log(arrDate)
+
+    let arrWeek = []
+    for (let i = 0; i < 10; i++) {
+      let dateSubtract = moment(dateSearch).subtract(i, 'weeks').format('YYYY-MM-DD')
+      arrWeek.push(dateSubtract)
+    }
+    // console.log(arrWeek)
+
+    let arrMonth = []
+    for (let i = 0; i < 10; i++) {
+      let dateSubtract = moment(dateSearch).subtract(i, 'months').format('YYYY-MM-DD')
+      arrMonth.push(dateSubtract)
+    }
+    console.log(arrMonth)
+
     // const startDate = new Date(date)
     // const endDate = new Date('2020-12-20T17:00:00.000Z')
     // const sortDateChose = _.isEmpty(_.toString(date)) ? {} : { $or: [{ vio_time: { $gte: new Date(startDate), $lt: new Date(endDate) } }] }
     const otherCondition = { deleted: { $ne: true } }
-    const sortDateChose = _.isEmpty(_.toString(date)) ? {} : { $or: [{ vio_time: { $lt: new Date(date) } }] }
+    const sortDateChose = _.isEmpty(_.toString(dateSearch)) ? {} : { $or: [{ vio_time: { $lte: new Date(dateSearch) } }] }
     const match = {
       $match: { $and: [otherCondition, sortDateChose] },
     }
 
-    const group = {
-      $group: {
-        _id: {
-          day: { $dayOfMonth: '$vio_time' },
-          month: { $month: '$vio_time' },
-          year: { $year: '$vio_time' },
-        },
-        status1: {
-          $sum: { $cond: [{ $eq: ['$status', 1] }, 1, 0] },
-        },
-        status2: {
-          $sum: { $cond: [{ $eq: ['$status', 2] }, 1, 0] },
-        },
-        status3: {
-          $sum: { $cond: [{ $eq: ['$status', 3] }, 1, 0] },
-        },
-        status4: {
-          $sum: { $cond: [{ $eq: ['$status', 4] }, 1, 0] },
-        },
-      },
-    }
-
     const project = {
       $project: {
-        date: '$_id',
+        time: '$_id',
         status1: 1,
         status2: 1,
         status3: 1,
         status4: 1,
-        _id: 0,
+        _id: 1,
       },
     }
 
-    let [err, result] = await to(
+    let [errDay, timelineDay] = await to(
       this.model.aggregate([
         match,
-        group,
+        {
+          $group: {
+            _id: { $dateToString: { format: '%Y-%m-%d', date: '$vio_time' } },
+            status1: {
+              $sum: { $cond: [{ $eq: ['$status', 1] }, 1, 0] },
+            },
+            status2: {
+              $sum: { $cond: [{ $eq: ['$status', 2] }, 1, 0] },
+            },
+            status3: {
+              $sum: { $cond: [{ $eq: ['$status', 3] }, 1, 0] },
+            },
+            status4: {
+              $sum: { $cond: [{ $eq: ['$status', 4] }, 1, 0] },
+            },
+          },
+        },
+        // { $sort: { _id: -1 } },
         project,
-        { $sort: { _id: -1 } },
-        { $skip: _.toNumber(config.limitPerPage) * (page - 1) },
-        { $limit: _.toNumber(config.limitPerPage) },
+        { $group: { _id: null, stats: { $push: '$$ROOT' } } },
+        {
+          $project: {
+            stats: {
+              $map: {
+                input: arrDate,
+                as: 'time',
+                in: {
+                  $let: {
+                    vars: { dateIndex: { $indexOfArray: ['$stats._id', '$$time'] } },
+                    in: {
+                      $cond: {
+                        if: { $ne: ['$$dateIndex', -1] },
+                        then: { $arrayElemAt: ['$stats', '$$dateIndex'] },
+                        else: { _id: '$$time', time: '$$time', status1: 0, status2: 0, status3: 0, status4: 0 },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        {
+          $unwind: '$stats',
+        },
+        {
+          $replaceRoot: {
+            newRoot: '$stats',
+          },
+        },
+        {
+          $project: { date: 1, status1: 1, status2: 1, status3: 1, status4: 1, _id: 0 },
+        },
+        // { $skip: _.toNumber(config.limitPerPage) * (page - 1) },
+        // { $limit: _.toNumber(config.limitPerPage) },
       ])
     )
-    if (err) throw err
+    if (errDay) throw errDay
 
-    return result
+    let [errMonth, timelineMonth] = await to(
+      this.model.aggregate([
+        match,
+        {
+          $group: {
+            _id: { month: { $month: '$vio_time' }, year: { $year: '$vio_time' } },
+            status1: {
+              $sum: { $cond: [{ $eq: ['$status', 1] }, 1, 0] },
+            },
+            status2: {
+              $sum: { $cond: [{ $eq: ['$status', 2] }, 1, 0] },
+            },
+            status3: {
+              $sum: { $cond: [{ $eq: ['$status', 3] }, 1, 0] },
+            },
+            status4: {
+              $sum: { $cond: [{ $eq: ['$status', 4] }, 1, 0] },
+            },
+          },
+        },
+        // { $sort: { _id: -1 } },
+        project,
+        // { $group: { _id: null, stats: { $push: '$$ROOT' } } },
+        // {
+        //   $project: {
+        //     stats: {
+        //       $map: {
+        //         input: arrDate,
+        //         as: 'time',
+        //         in: {
+        //           $let: {
+        //             vars: { dateIndex: { $indexOfArray: ['$stats._id', '$$time'] } },
+        //             in: {
+        //               $cond: {
+        //                 if: { $ne: ['$$dateIndex', -1] },
+        //                 then: { $arrayElemAt: ['$stats', '$$dateIndex'] },
+        //                 else: { _id: '$$time', date: '$$time', status1: 0, status2: 0, status3: 0, status4: 0 },
+        //               },
+        //             },
+        //           },
+        //         },
+        //       },
+        //     },
+        //   },
+        // },
+        // {
+        //   $unwind: '$stats',
+        // },
+        // {
+        //   $replaceRoot: {
+        //     newRoot: '$stats',
+        //   },
+        // },
+        // {
+        //   $project: { date: 1, status1: 1, status2: 1, status3: 1, status4: 1, _id: 0 },
+        // },
+        // { $skip: _.toNumber(config.limitPerPage) * (page - 1) },
+        // { $limit: _.toNumber(config.limitPerPage) },
+      ])
+    )
+    if (errMonth) throw errMonth
+
+    return timelineMonth
   }
 }
