@@ -63,3 +63,13 @@ export const verifyPhone = (phone) => {
 
   return reg.test(phone)
 }
+
+export const defineObject = (object) => {
+  let defineObject = { 0: 'Mô tô', 1: 'Ô tô khách trên 16 chỗ', 2: 'Ô tô con', 3: 'Ô tô khách 16 chỗ', 4: 'Ô tô tải' }
+  return defineObject[object]
+}
+
+export const defineStatus = (status) => {
+  let defineStatus = { 0: '', 1: 'Chưa duyệt', 2: 'Đã duyệt', 3: 'Đã xuất biên bản', 4: 'Đã hoàn thành xử phạt', 5: 'Quá hạn' }
+  return defineStatus[status]
+}

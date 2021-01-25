@@ -10,11 +10,12 @@ import * as validator from '../../validator'
  */
 
 export const violationRouter = (router) => {
-  router.post('/violation', async (req, res, next) => {
+  router.post('/violations', async (req, res, next) => {
     try {
       const { idsCamera, object, status, plate, startDate, endDate, page } = req.body
+      const { platform } = req.query
       //check page
-      if (_.isEmpty(page)) {
+      if (_.isEmpty(_.toString(page))) {
         throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Số trang không hợp lệ' })
       }
 
@@ -36,7 +37,7 @@ export const violationRouter = (router) => {
         }
       }
 
-      const result = await app.violation.getAll(idsCamera, object, status, plate, startDate, endDate, page)
+      const result = await app.violation.getAll(idsCamera, object, status, plate, startDate, endDate, page, platform)
       res.json(result)
     } catch (error) {
       next(error)
@@ -45,20 +46,45 @@ export const violationRouter = (router) => {
 
   router.post('/public/violations', async (req, res, next) => {
     try {
-      const { plate } = req.body
+      const { idsCamera, object, status, plate, startDate, endDate, page } = req.body
+      const { platform } = req.query
 
-      if (_.isEmpty(plate)) {
-        throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Nhập biển kiểm soát' })
+      if (platform) {
+        if (_.isEmpty(plate)) {
+          throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Nhập biển số' })
+        }
       }
-      const result = await app.violation.getAllPublic(plate)
 
+      if (_.isEmpty(_.toString(page))) {
+        throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Số trang không hợp lệ' })
+      }
+
+      if (idsCamera) {
+        if (!validator.isMongoIdArray(idsCamera)) {
+          throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'idsCamera vi phạm phải là một mảng' })
+        }
+      }
+
+      if (object && !_.isEmpty(object)) {
+        if (!validator.inObject(object)) {
+          throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Loại xe không hợp lệ' })
+        }
+      }
+
+      if (status && !_.isEmpty(status)) {
+        if (!validator.inStatus(status)) {
+          throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Trạng thái không hợp lệ' })
+        }
+      }
+
+      const result = await app.violation.getAll(idsCamera, object, status, plate, startDate, endDate, page, platform)
       res.json(result)
     } catch (error) {
       next(error)
     }
   })
 
-  router.get('/violation/:id', async (req, res, next) => {
+  router.get('/violations/:id', async (req, res, next) => {
     try {
       const { id } = req.params
       if (!validator.isMongoId(id)) {
@@ -71,7 +97,7 @@ export const violationRouter = (router) => {
     }
   })
 
-  router.put('/violation/approved', async (req, res, next) => {
+  router.put('/violations/approved', async (req, res, next) => {
     try {
       const { ids } = req.body
       if (!validator.isMongoIdArray(ids)) {
@@ -85,7 +111,7 @@ export const violationRouter = (router) => {
     }
   })
 
-  router.put('/violation/unapproved', async (req, res, next) => {
+  router.put('/violations/unapproved', async (req, res, next) => {
     try {
       const { ids } = req.body
       if (!validator.isMongoIdArray(ids)) {
@@ -114,7 +140,7 @@ export const violationRouter = (router) => {
   //   }
   // })
 
-  router.put('/violation/:id', async (req, res, next) => {
+  router.put('/violations/:id', async (req, res, next) => {
     try {
       const { id } = req.params
       const { status, object, plate, owner, phone, email } = req.body
@@ -158,7 +184,7 @@ export const violationRouter = (router) => {
     }
   })
 
-  router.post('/violation/:id/report', async (req, res, next) => {
+  router.post('/violations/:id/report', async (req, res, next) => {
     try {
       const { id } = req.params
       const { vioAddress, vioOwner, addressOwner, sovlingDate } = req.body
@@ -172,7 +198,7 @@ export const violationRouter = (router) => {
     }
   })
 
-  router.delete('/violation/delete', async (req, res, next) => {
+  router.delete('/violations/delete', async (req, res, next) => {
     try {
       const { ids } = req.body
       if (!validator.isMongoIdArray(ids)) {

@@ -33,7 +33,7 @@ export class ViolationModel extends BaseModel {
 
     const objectCondition = _.isEmpty(_.toString(vioObject)) ? {} : { $or: [{ object: vioObject }] }
     const statusCondition = _.isEmpty(_.toString(vioStatus)) ? {} : { $or: [{ status: vioStatus }] }
-    const plateCondition = _.isEmpty(vioPlate) ? {} : { $or: [{ plate: vioPlate }] }
+    const plateCondition = _.isEmpty(vioPlate) ? {} : { $or: [{ plate: { $in: vioPlate } }] }
     const searchDateCondition =
       _.isEmpty(startSearchDate) && _.isEmpty(endSearchDate) ? {} : { $or: [{ vio_time: { $gte: new Date(startSearchDate), $lte: new Date(endSearchDate) } }] }
     const otherCondition = { deleted: { $ne: true } }
@@ -115,75 +115,6 @@ export class ViolationModel extends BaseModel {
     return result
   }
 
-  getAllPublic = async (plate) => {
-    const otherCondition = { deleted: { $ne: true } }
-    const plateCondition = _.isEmpty(plate) ? {} : { $or: [{ plate: plate }] }
-    const match = { $match: { $and: [plateCondition, otherCondition] } }
-
-    const project = {
-      $project: {
-        _id: 0,
-        id: '$_id',
-        action: 1,
-        object: 1,
-        status: 1,
-        plate: 1,
-        camera: 1,
-        time: 1,
-        images: 1,
-        objectImages: '$object_images',
-        plagteImages: '$plate_images',
-        vioTime: '$vio_time',
-        email: 1,
-        owner: 1,
-        phone: 1,
-      },
-    }
-    let [err, result] = await to(this.model.aggregate([match, project]))
-    if (err) throw err
-
-    let dataResutl = []
-    if (!_.isEmpty(result)) {
-      _.forEach(result, function (item) {
-        let data = {
-          id: item.id,
-          violationType: item.action === 3 ? 'Đỗ xe sai quy định' : '',
-          vehicleType:
-            item.object === 0
-              ? 'Mô tô'
-              : item.object === 1
-              ? 'Ô tô khách trên 16 chỗ'
-              : item.object === 2
-              ? 'Ô tô con'
-              : item.object === 3
-              ? 'Ô tô khách 16 chỗ'
-              : 'Ô tô tải',
-          status:
-            item.status === 1
-              ? 'Chưa duyệt'
-              : item.status === 2
-              ? 'Đã duyệt'
-              : item.status === 3
-              ? 'Đã xuất biên bản'
-              : item.status === 4
-              ? 'Đã hoàn thành xử phạt'
-              : 'Quá hạn',
-          numberPlate: item.plate,
-          camera: { id: item.camera },
-          images: !_.isEmpty(replaceImage(item.images)) ? config.LinkImageMobile + replaceImage(item.images) : [],
-          objectImages: !_.isEmpty(replaceImage(item.objectImages)) ? config.LinkImageMobile + replaceImage(item.objectImages) : [],
-          plateImages: !_.isEmpty(replaceImage(item.plateImages)) ? config.LinkImageMobile + replaceImage(item.plateImages) : [],
-          vioTime: item.vioTime,
-          email: item.email,
-          owner: item.owner,
-          phone: item.phone,
-        }
-        dataResutl.push(data)
-      })
-      return dataResutl
-    }
-  }
-
   /**
    *
    * @param {mongoose.Types.ObjectId} id
@@ -219,14 +150,6 @@ export class ViolationModel extends BaseModel {
 
     let [err, result] = await to(this.model.aggregate([match, project]))
     if (err) throw err
-
-    const replaceImage = (image) => {
-      let arrayImage = []
-      _.forEach(image, function (item) {
-        arrayImage.push(replacePath(item))
-      })
-      return arrayImage
-    }
 
     let dataResutl = []
     if (!_.isEmpty(result)) {

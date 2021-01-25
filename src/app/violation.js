@@ -13,6 +13,7 @@ import * as validator from '../validator'
 import { GRpcClient } from '../services/grpc'
 import { config } from '../configs'
 import moment from 'moment'
+import { replacePath, replaceImage } from '../utils'
 
 export class Violation {
   // /** @type {GRpcClient} */
@@ -22,6 +23,7 @@ export class Violation {
     this.perPage = 10
     this.arrayObject = ['bike', 'bus', 'car', 'miniBus', 'truck']
     this.arrayStatus = ['unapproved', 'approved', 'finishReport', 'finishPenal', 'expired']
+
     // const protoFile = path.join(__dirname, config.protoFile);
 
     // this.#grpcClient = new GRpcClient('10.49.46.251:50052', config.protoFile, 'parking.Camera')
@@ -38,13 +40,15 @@ export class Violation {
    * @param {String} page
    */
   /** Get all violations */
-  getAll = async (idsCamera, object, status, plate, startDate, endDate, page) => {
+  getAll = async (idsCamera, object, status, plate, startDate, endDate, page, platform) => {
     try {
       // let perPage = 10
       let vioObject = _.includes(this.arrayObject, object) ? _.indexOf(this.arrayObject, object) : undefined
       let vioStatus = _.includes(this.arrayStatus, status) ? _.indexOf(this.arrayStatus, status) + 1 : undefined
 
-      const vioPlate = plate ? plate : undefined
+      let plateConverArray = _.split(plate, ',', -1)
+
+      const vioPlate = plate ? plateConverArray : undefined
       const startSearchDate = startDate && startDate != '' && startDate != 'null' ? new Date(startDate).toISOString() : undefined
       const endSearchDate = endDate && endDate != '' && endDate != 'null' ? new Date(endDate).toISOString() : undefined
       let [err, conditions] = await to(model.violation.conditions(idsCamera, vioObject, vioStatus, vioPlate, startSearchDate, endSearchDate, page))
@@ -54,41 +58,63 @@ export class Violation {
       const countPromise = model.violation.getCount(conditions.conditionsCount)
 
       let pageDt = [],
-        total = 0
+        totalDt = 0
       let [errPromise, results] = await to(Promise.all([dataPromise, countPromise]))
       if (errPromise) throw errPromise
 
       pageDt = results[0]
-      total = results[1]
+      totalDt = results[1]
 
-      const totalRecord = total[0]?.myCount || 0
+      const totalRecord = totalDt[0]?.myCount || 0
       const totalPage = Math.ceil(totalRecord / this.perPage) || 0
 
       let pageData = pageDt ? pageDt : []
-      return {
-        pageData,
-        totalRecord,
-        totalPage,
+
+      // data mobile
+      console.log({ platform })
+      let data = []
+      if (_.toString(platform) === 'mobile') {
+        let convertData = pageDt ? pageDt : []
+        if (!_.isEmpty(convertData)) {
+          _.forEach(convertData, function (item) {
+            let dataDetail = {
+              id: item.id,
+              violationType: item.action === 3 ? 'Đỗ xe sai quy định' : '',
+              vehicleType: validator.defineObject(item.object),
+              status: validator.defineStatus(item.status),
+              numberPlate: item.plate,
+              camera: { id: item.camera },
+              images: !_.isEmpty(replaceImage(item.images)) ? config.LinkImageMobile + replaceImage(item.images) : [],
+              objectImages: !_.isEmpty(replaceImage(item.objectImages)) ? config.LinkImageMobile + replaceImage(item.objectImages) : [],
+              plateImages: !_.isEmpty(replaceImage(item.plateImages)) ? config.LinkImageMobile + replaceImage(item.plateImages) : [],
+              vioTime: item.vioTime,
+              email: item.email,
+              owner: item.owner,
+              phone: item.phone,
+            }
+            data.push(dataDetail)
+          })
+        }
       }
+
+      let perPage = totalPage
+      let total = totalRecord
+      page = _.toNumber(page)
+      return platform
+        ? {
+            data,
+            page,
+            perPage,
+            total,
+          }
+        : {
+            pageData,
+            totalRecord,
+            totalPage,
+          }
     } catch (error) {
       logger.error('Violations.getAll() error:', error)
       throw new AppError({ code: StatusCodes.INTERNAL_SERVER_ERROR, message: 'Lấy danh sách vi phạm thất bại' })
-    }
-  }
-
-  /**
-   *
-   * @param {String} plate
-   */
-  getAllPublic = async (plate) => {
-    try {
-      let [err, result] = await to(model.violation.getAllPublic(plate))
-      if (err) throw err
-
-      return result
-    } catch (error) {
-      logger.error('Violations.getAllPublic() error:', error)
-      throw new AppError({ code: StatusCodes.INTERNAL_SERVER_ERROR, message: 'Lấy vi phạm thất bại' })
     }
   }
 
