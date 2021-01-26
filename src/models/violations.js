@@ -4,8 +4,9 @@ import _ from 'lodash'
 import { violationsSchema, schemaOptions } from './define'
 import { BaseModel, BaseSchema } from './base'
 import moment from 'moment'
-import { replacePath, replaceImage } from '../utils'
+import { replaceImage } from '../utils'
 import { config } from '../configs'
+import * as validator from '../validator'
 
 export class ViolationModel extends BaseModel {
   // perPage = undefined
@@ -77,7 +78,7 @@ export class ViolationModel extends BaseModel {
    *
    * @param {[]} conditions
    */
-  getAll = async (conditions) => {
+  getAll = async (conditions, platform) => {
     let [err, result] = await to(this.model.aggregate(conditions))
     if (err) throw err
 
@@ -91,9 +92,9 @@ export class ViolationModel extends BaseModel {
           status: item.status,
           plate: item.plate,
           camera: item.camera,
-          images: replaceImage(item.images),
-          objectImages: replaceImage(item.objectImages),
-          plateImages: replaceImage(item.plateImages),
+          images: replaceImage(item.images, platform),
+          objectImages: replaceImage(item.objectImages, platform),
+          plateImages: replaceImage(item.plateImages, platform),
           vioTime: item.vioTime,
           email: item.email,
           owner: item.owner,
@@ -119,7 +120,7 @@ export class ViolationModel extends BaseModel {
    *
    * @param {mongoose.Types.ObjectId} id
    */
-  getById = async (id) => {
+  getById = async (id, platform) => {
     const otherCondition = { deleted: { $ne: true } }
     const idCondition = { _id: mongoose.Types.ObjectId(id) }
     const match = {
@@ -140,7 +141,7 @@ export class ViolationModel extends BaseModel {
         time: 1,
         images: 1,
         objectImages: '$object_images',
-        plagteImages: '$plate_images',
+        plateImages: '$plate_images',
         vioTime: '$vio_time',
         email: 1,
         owner: 1,
@@ -151,7 +152,7 @@ export class ViolationModel extends BaseModel {
     let [err, result] = await to(this.model.aggregate([match, project]))
     if (err) throw err
 
-    let dataResutl = []
+    let dataWeb = []
     if (!_.isEmpty(result)) {
       _.forEach(result, function (item) {
         let data = {
@@ -161,18 +162,44 @@ export class ViolationModel extends BaseModel {
           status: item.status,
           plate: item.plate,
           camera: item.camera,
-          images: replaceImage(item.images),
-          objectImages: replaceImage(item.objectImages),
-          plateImages: replaceImage(item.plateImages),
+          images: replaceImage(item.images, platform),
+          objectImages: replaceImage(item.objectImages, platform),
+          plateImages: replaceImage(item.plateImages, platform),
           vioTime: item.vioTime,
           email: item.email,
           owner: item.owner,
           phone: item.phone,
         }
-        dataResutl.push(data)
+        dataWeb.push(data)
       })
-      return dataResutl[0] ? dataResutl[0] : {}
     }
+
+    let dataMobile = []
+    if (platform) {
+      if (!_.isEmpty(result)) {
+        _.forEach(result, function (item) {
+          let dataDetail = {
+            id: item.id,
+            violationType: item.action === 3 ? 'Đỗ xe sai quy định' : 'Chưa có hành động',
+            vehicleType: validator.defineObject(item.object),
+            status: validator.defineStatus(item.status),
+            numberPlate: item.plate,
+            camera: { id: item.camera },
+            images: replaceImage(item.images, platform),
+            objectImages: replaceImage(item.objectImages, platform),
+            plateImages: replaceImage(item.plateImages, platform),
+            thumbnail: replaceImage(item.objectImages, platform)[0] ? replaceImage(item.objectImages, platform)[0] : null,
+            vioTime: item.vioTime,
+            email: item.email,
+            owner: item.owner,
+            phone: item.phone,
+          }
+          dataMobile.push(dataDetail)
+        })
+      }
+    }
+
+    return platform ? dataMobile[0] : dataWeb[0] ? dataWeb[0] : {}
   }
 
   /**
@@ -221,6 +248,7 @@ export class ViolationModel extends BaseModel {
     )
     if (err) throw err
 
+    console.log({ result })
     let dataResutl = []
     if (!_.isEmpty(result)) {
       let data = {

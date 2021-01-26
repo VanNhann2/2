@@ -25,6 +25,10 @@ export const violationRouter = (router) => {
         }
       }
 
+      if (platform || !_.isEmpty(platform)) {
+        throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Platform không hợp lệ' })
+      }
+
       if (object && !_.isEmpty(object)) {
         if (!validator.inObject(object)) {
           throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Loại xe không hợp lệ' })
@@ -49,10 +53,16 @@ export const violationRouter = (router) => {
       const { idsCamera, object, status, plate, startDate, endDate, page } = req.body
       const { platform } = req.query
 
-      if (platform) {
+      if (platform && !_.isEmpty(platform)) {
         if (_.isEmpty(plate)) {
           throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Nhập biển số' })
         }
+
+        if (_.toString(platform) !== 'mobile') {
+          throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Platform không hợp lệ' })
+        }
+      } else {
+        throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Platform không hợp lệ' })
       }
 
       if (_.isEmpty(_.toString(page))) {
@@ -87,10 +97,40 @@ export const violationRouter = (router) => {
   router.get('/violations/:id', async (req, res, next) => {
     try {
       const { id } = req.params
+      const { platform } = req.query
+
+      if (platform || !_.isEmpty(platform)) {
+        throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Platform không hợp lệ' })
+      }
+
       if (!validator.isMongoId(id)) {
         throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Vi phạm không hợp lệ' })
       }
-      const result = await app.violation.getById(id)
+      const result = await app.violation.getById(id, platform)
+      res.json(result)
+    } catch (error) {
+      next(error)
+    }
+  })
+
+  router.get('/public/violations/:id', async (req, res, next) => {
+    try {
+      const { id } = req.params
+      const { platform } = req.query
+
+      if (!validator.isMongoId(id)) {
+        throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Vi phạm không hợp lệ' })
+      }
+
+      if (platform && !_.isEmpty(platform)) {
+        if (_.toString(platform) !== 'mobile') {
+          throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Platform không hợp lệ' })
+        }
+      } else {
+        throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Platform không hợp lệ' })
+      }
+
+      const result = await app.violation.getById(id, platform)
       res.json(result)
     } catch (error) {
       next(error)

@@ -1,14 +1,21 @@
 import { config } from '../configs'
-import _ from 'lodash'
+import _, { isEmpty } from 'lodash'
 
-export const replacePath = (path) => {
+const replacePath = (path) => {
   return _.replace(path, config.pathImage, config.replacePathImage)
 }
 
-export const replaceImage = (image) =>{
+export const replaceImage = (image, platform) => {
+  console.log({ platform })
   let arrayImage = []
-  _.forEach(image, function (item) {
-    arrayImage.push(replacePath(item))
-  })
+  if (platform && !isEmpty(platform)) {
+    _.forEach(image, function (item) {
+      arrayImage.push(config.LinkImageMobile + replacePath(item))
+    })
+  } else {
+    _.forEach(image, function (item) {
+      arrayImage.push(replacePath(item))
+    })
+  }
   return arrayImage
 }

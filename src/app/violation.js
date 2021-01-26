@@ -13,7 +13,7 @@ import * as validator from '../validator'
 import { GRpcClient } from '../services/grpc'
 import { config } from '../configs'
 import moment from 'moment'
-import { replacePath, replaceImage } from '../utils'
+import { replaceImage } from '../utils'
 
 export class Violation {
   // /** @type {GRpcClient} */
@@ -54,7 +54,7 @@ export class Violation {
       let [err, conditions] = await to(model.violation.conditions(idsCamera, vioObject, vioStatus, vioPlate, startSearchDate, endSearchDate, page))
       if (err) throw err
 
-      const dataPromise = model.violation.getAll(conditions.conditionsData)
+      const dataPromise = model.violation.getAll(conditions.conditionsData, platform)
       const countPromise = model.violation.getCount(conditions.conditionsCount)
 
       let pageDt = [],
@@ -71,26 +71,19 @@ export class Violation {
       let pageData = pageDt ? pageDt : []
 
       // data mobile
-      console.log({ platform })
       let data = []
-      if (_.toString(platform) === 'mobile') {
+      if (platform) {
         let convertData = pageDt ? pageDt : []
         if (!_.isEmpty(convertData)) {
           _.forEach(convertData, function (item) {
             let dataDetail = {
               id: item.id,
-              violationType: item.action === 3 ? 'Đỗ xe sai quy định' : '',
+              violationType: item.action === 3 ? 'Đỗ xe sai quy định' : 'Chưa có hành động',
               vehicleType: validator.defineObject(item.object),
-              status: validator.defineStatus(item.status),
               numberPlate: item.plate,
-              camera: { id: item.camera },
-              images: !_.isEmpty(replaceImage(item.images)) ? config.LinkImageMobile + replaceImage(item.images) : [],
-              objectImages: !_.isEmpty(replaceImage(item.objectImages)) ? config.LinkImageMobile + replaceImage(item.objectImages) : [],
-              plateImages: !_.isEmpty(replaceImage(item.plateImages)) ? config.LinkImageMobile + replaceImage(item.plateImages) : [],
+              images: replaceImage(item.images, platform),
+              thumbnail: replaceImage(item.objectImages, platform) ? replaceImage(item.objectImages, platform)[0] : null,
               vioTime: item.vioTime,
-              email: item.email,
-              owner: item.owner,
-              phone: item.phone,
             }
             data.push(dataDetail)
           })
@@ -122,9 +115,9 @@ export class Violation {
    *
    * @param {mongoose.Types.ObjectId} id
    */
-  getById = async (id) => {
+  getById = async (id, platform) => {
     try {
-      let [errGet, result] = await to(model.violation.getById(id))
+      let [errGet, result] = await to(model.violation.getById(id, platform))
       if (errGet) throw errGet
 
       // console.log(id)
