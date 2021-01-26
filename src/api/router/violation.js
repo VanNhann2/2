@@ -252,7 +252,7 @@ export const violationRouter = (router) => {
     }
   })
 
-  router.post('/statistical', async (req, res, next) => {
+  router.post('/violations/statistical', async (req, res, next) => {
     try {
       const { day, timeline } = req.body
 

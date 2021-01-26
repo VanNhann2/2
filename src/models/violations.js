@@ -320,6 +320,7 @@ export class ViolationModel extends BaseModel {
         status2: 1,
         status3: 1,
         status4: 1,
+        count:1,
         _id: 1,
       },
     }
@@ -404,6 +405,7 @@ export class ViolationModel extends BaseModel {
             status4: {
               $sum: { $cond: [{ $eq: ['$status', 4] }, 1, 0] },
             },
+            count: { $sum: { $multiply: ['$status'] } },
           },
         },
         // { $sort: { _id: -1 } },

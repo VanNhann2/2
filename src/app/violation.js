@@ -54,7 +54,7 @@ export class Violation {
       let [err, conditions] = await to(model.violation.conditions(idsCamera, vioObject, vioStatus, vioPlate, startSearchDate, endSearchDate, page))
       if (err) throw err
 
-      const dataPromise = model.violation.getAll(conditions.conditionsData, platform)
+      const dataPromise = model.violation.getAll(conditions.conditionsData)
       const countPromise = model.violation.getCount(conditions.conditionsCount)
 
       let pageDt = [],
@@ -363,7 +363,7 @@ export class Violation {
   getStatistical = async (day, timeline) => {
     try {
       let dateSearch = new Date(day)
-
+      console.log({ dateSearch })
       let [err, result] = await to(model.violation.getStatistical(dateSearch, timeline))
       if (err) throw err
 
