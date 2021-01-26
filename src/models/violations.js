@@ -78,32 +78,11 @@ export class ViolationModel extends BaseModel {
    *
    * @param {[]} conditions
    */
-  getAll = async (conditions, platform) => {
+  getAll = async (conditions) => {
     let [err, result] = await to(this.model.aggregate(conditions))
     if (err) throw err
 
-    let dataResutl = []
-    if (!_.isEmpty(result)) {
-      _.forEach(result, function (item) {
-        let data = {
-          id: item.id,
-          action: item.action,
-          object: item.object,
-          status: item.status,
-          plate: item.plate,
-          camera: item.camera,
-          images: replaceImage(item.images, platform),
-          objectImages: replaceImage(item.objectImages, platform),
-          plateImages: replaceImage(item.plateImages, platform),
-          vioTime: item.vioTime,
-          email: item.email,
-          owner: item.owner,
-          phone: item.phone,
-        }
-        dataResutl.push(data)
-      })
-      return dataResutl
-    }
+    return result
   }
 
   /**
