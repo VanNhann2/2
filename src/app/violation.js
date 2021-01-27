@@ -51,7 +51,7 @@ export class Violation {
       const vioPlate = plate ? plateConverArray : undefined
       const startSearchDate = startDate && startDate != '' && startDate != 'null' ? new Date(startDate).toISOString() : undefined
       const endSearchDate = endDate && endDate != '' && endDate != 'null' ? new Date(endDate).toISOString() : undefined
-      let [err, conditions] = await to(model.violation.conditions(idsCamera, vioObject, vioStatus, vioPlate, startSearchDate, endSearchDate, page))
+      let [err, conditions] = await to(model.violation.conditions(idsCamera, vioObject, vioStatus, vioPlate, startSearchDate, endSearchDate, page, platform))
       if (err) throw err
 
       const dataPromise = model.violation.getAll(conditions.conditionsData)
@@ -68,11 +68,59 @@ export class Violation {
       const totalRecord = totalDt[0]?.myCount || 0
       const totalPage = Math.ceil(totalRecord / this.perPage) || 0
 
-      let pageData = pageDt ? pageDt : []
+      let dataResult = pageDt ? pageDt : []
 
-      // data mobile
+      // data for admin// pageData la do front end da dung bien pageData nen data cua web public la pageData
+      let pageData = []
+      if (platform === 'web') {
+        if (!_.isEmpty(dataResult)) {
+          _.forEach(dataResult, function (item) {
+            let dataFor = {
+              id: item.id,
+              action: item.action,
+              object: item.object,
+              status: item.status,
+              plate: item.plate,
+              camera: item.camera,
+              images: replaceImage(item.images, platform),
+              objectImages: replaceImage(item.objectImages, platform),
+              plateImages: replaceImage(item.plateImages, platform),
+              vioTime: item.vioTime,
+              alprTime: item.alprTime,
+              email: item.email,
+              owner: item.owner,
+              phone: item.phone,
+            }
+            pageData.push(dataFor)
+          })
+        }
+      } else {
+        if (!_.isEmpty(dataResult)) {
+          _.forEach(dataResult, function (item) {
+            let dataFor = {
+              id: item.id,
+              action: item.action,
+              object: item.object,
+              status: item.status,
+              plate: item.plate,
+              camera: item.camera,
+              images: replaceImage(item.images, platform),
+              objectImages: replaceImage(item.objectImages, platform),
+              plateImages: replaceImage(item.plateImages, platform),
+              vioTime: item.vioTime,
+              alprTime: item.alprTime,
+              email: item.email,
+              owner: item.owner,
+              phone: item.phone,
+            }
+            pageData.push(dataFor)
+          })
+        }
+      }
+
+      // data mobile public
       let data = []
-      if (platform) {
+      if (platform === 'mobile') {
         let convertData = pageDt ? pageDt : []
         if (!_.isEmpty(convertData)) {
           _.forEach(convertData, function (item) {
@@ -93,7 +141,7 @@ export class Violation {
       let perPage = totalPage
       let total = totalRecord
       page = _.toNumber(page)
-      return platform
+      return platform === 'mobile'
         ? {
             data,
             page,

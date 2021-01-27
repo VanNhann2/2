@@ -18,6 +18,7 @@ export const violationsSchema = {
   object_images: [{ type: String }],
   plate_images: [{ type: String }],
   vio_time: { type: Date, required: true },
+  alpr_time: { type: Date },
   vio_adress: { type: String, required: true },
   owner: { type: String, required: true },
   phone: { type: String },

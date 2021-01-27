@@ -13,7 +13,7 @@ export const violationRouter = (router) => {
   router.post('/violations', async (req, res, next) => {
     try {
       const { idsCamera, object, status, plate, startDate, endDate, page } = req.body
-      const { platform } = req.query
+      const platform = ''
       //check page
       if (_.isEmpty(_.toString(page))) {
         throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Số trang không hợp lệ' })
@@ -23,10 +23,6 @@ export const violationRouter = (router) => {
         if (!validator.isMongoIdArray(idsCamera)) {
           throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'idsCamera vi phạm phải là một mảng' })
         }
-      }
-
-      if (platform || !_.isEmpty(platform)) {
-        throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Platform không hợp lệ' })
       }
 
       if (object && !_.isEmpty(object)) {
@@ -50,41 +46,25 @@ export const violationRouter = (router) => {
 
   router.post('/public/violations', async (req, res, next) => {
     try {
-      const { idsCamera, object, status, plate, startDate, endDate, page } = req.body
+      const idsCamera = []
+      const object = ''
+      const status = ''
+      const startDate = ''
+      const endDate = ''
+      // const { idsCamera, object, status, startDate, endDate } = ''
+      const { plate, page } = req.body
       const { platform } = req.query
 
-      if (platform && !_.isEmpty(platform)) {
-        if (_.isEmpty(plate)) {
-          throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Nhập biển số' })
-        }
+      if (_.isEmpty(plate)) {
+        throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Nhập biển số' })
+      }
 
-        if (_.toString(platform) !== 'mobile') {
-          throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Platform không hợp lệ' })
-        }
-      } else {
+      if (_.toString(platform) !== 'mobile' && _.toString(platform) !== 'web') {
         throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Platform không hợp lệ' })
       }
 
       if (_.isEmpty(_.toString(page))) {
         throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Số trang không hợp lệ' })
-      }
-
-      if (idsCamera) {
-        if (!validator.isMongoIdArray(idsCamera)) {
-          throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'idsCamera vi phạm phải là một mảng' })
-        }
-      }
-
-      if (object && !_.isEmpty(object)) {
-        if (!validator.inObject(object)) {
-          throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Loại xe không hợp lệ' })
-        }
-      }
-
-      if (status && !_.isEmpty(status)) {
-        if (!validator.inStatus(status)) {
-          throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Trạng thái không hợp lệ' })
-        }
       }
 
       const result = await app.violation.getAll(idsCamera, object, status, plate, startDate, endDate, page, platform)
@@ -97,11 +77,7 @@ export const violationRouter = (router) => {
   router.get('/violations/:id', async (req, res, next) => {
     try {
       const { id } = req.params
-      const { platform } = req.query
-
-      if (platform || !_.isEmpty(platform)) {
-        throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Platform không hợp lệ' })
-      }
+      const { platform } = null
 
       if (!validator.isMongoId(id)) {
         throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Vi phạm không hợp lệ' })
@@ -122,11 +98,7 @@ export const violationRouter = (router) => {
         throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Vi phạm không hợp lệ' })
       }
 
-      if (platform && !_.isEmpty(platform)) {
-        if (_.toString(platform) !== 'mobile') {
-          throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Platform không hợp lệ' })
-        }
-      } else {
+      if (_.toString(platform) !== 'mobile') {
         throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Platform không hợp lệ' })
       }
 
@@ -140,6 +112,7 @@ export const violationRouter = (router) => {
   router.put('/violations/approved', async (req, res, next) => {
     try {
       const { ids } = req.body
+
       if (!validator.isMongoIdArray(ids)) {
         throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Id vi phạm phải là một mảng' })
       }
