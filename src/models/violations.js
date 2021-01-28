@@ -310,6 +310,7 @@ export class ViolationModel extends BaseModel {
       let dateSubtract = moment(dateSearch).subtract(i, 'months').format('YYYY-MM')
       arrMonth.push(dateSubtract)
     }
+    // console.log(arrMonth)
 
     let arrYear = []
     for (let i = 0; i < 10; i++) {
@@ -427,6 +428,8 @@ export class ViolationModel extends BaseModel {
     )
     if (errWeek) throw timelineWeek
 
+
+    //month
     let [errMonth, timelineMonth] = await to(
       this.model.aggregate([
         match,
@@ -488,6 +491,30 @@ export class ViolationModel extends BaseModel {
       ])
     )
     if (errMonth) throw errMonth
+
+    const addStartMonth = (dateStart) => {
+      const dateSear = `${new Date(dateSearch).getFullYear()}-${new Date(dateSearch).getMonth() + 1}`
+      if (moment(dateStart).isSame(dateSear, 'month')) {
+        console.log("đâsd")
+        return `${new Date(dateSearch).getFullYear()}-${new Date(dateSearch).getMonth() + 1}-${new Date(dateSearch).getDate()}`
+      } else return moment(dateStart).clone().startOf('month').format('YYYY-MM-DD')
+    }
+
+    const dataMonth = []
+    if (!_.isEmpty(timelineMonth)) {
+      _.forEach(timelineMonth, function (item) {
+        let dataFor = {
+          status1: item.status1,
+          status2: item.status2,
+          status3: item.status3,
+          status4: item.status4,
+          start: addStartMonth(item.time),
+          end: moment(item.time).clone().endOf('month').format('YYYY-MM-DD')
+        }
+        dataMonth.push(dataFor)
+      })
+    }
+    /// end month data == dataMonth
 
     let [errYear, timelineYear] = await to(
       this.model.aggregate([
@@ -551,6 +578,27 @@ export class ViolationModel extends BaseModel {
     )
     if (errYear) throw errYear
 
-    return timelineWeek
+    const addStartYear = (dateStart) => {
+      const dateSear = `${new Date(dateSearch).getFullYear()}`
+      if (moment(dateStart).isSame(dateSear, 'month')) {
+        return `${new Date(dateSearch).getFullYear()}-${new Date(dateSearch).getMonth() + 1}-${new Date(dateSearch).getDate()}`
+      } else return moment(dateStart).clone().startOf('year').format('YYYY-MM-DD')
+    }
+
+    const dataYear = []
+    if (!_.isEmpty(timelineYear)) {
+      _.forEach(timelineYear, function (item) {
+        let dataFor = {
+          status1: item.status1,
+          status2: item.status2,
+          status3: item.status3,
+          status4: item.status4,
+          start: addStartYear(item.time),
+          end: moment(item.time).clone().endOf('year').format('YYYY-MM-DD')
+        }
+        dataYear.push(dataFor)
+      })
+    }
+    return dataYear
   }
 }
