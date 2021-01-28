@@ -32,6 +32,7 @@ const violationConfig = {
   pathImage: process.env.IMAGE_FOLDER,
   replacePathImage: process.env.IMAGE_FILE_PREFIX,
   limitPerPage: process.env.LIMIT_PER_PAGE,
+  limitStatistical: process.env.LIMIT_STATISTICAL,
   LinkImageMobile: process.env.LINK_IMAGE_MOBILE
 }
 

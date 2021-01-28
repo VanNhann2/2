@@ -1,4 +1,4 @@
-import mongoose from 'mongoose'
+import mongoose, { Mongoose } from 'mongoose'
 import to from 'await-to-js'
 import _ from 'lodash'
 import { violationsSchema, schemaOptions } from './define'
@@ -22,9 +22,9 @@ export class ViolationModel extends BaseModel {
    * @param {Date} startSearchDate
    * @param {Date} endSearchDate
    * @param {Number} page
+   * @param {'web'|'mobile'} platform
    */
   conditions = async (idsCamera, vioObject, vioStatus, vioPlate, startSearchDate, endSearchDate, page, platform) => {
-
     const arrIds = []
     if (!_.isEmpty(idsCamera)) {
       for (let id of idsCamera) {
@@ -105,6 +105,7 @@ export class ViolationModel extends BaseModel {
   /**
    *
    * @param {mongoose.Types.ObjectId} id
+   * @param {'web'|'mobile'} platform
    */
   getById = async (id, platform) => {
     const otherCondition = { deleted: { $ne: true } }
@@ -216,11 +217,7 @@ export class ViolationModel extends BaseModel {
   /**
    *
    * @param {ObjectId} id
-   * @param {String} vioObject
-   * @param {String} vioPlate
-   * @param {String} vioOwner
-   * @param {String} vioPhone
-   * @param {String} vioEmail
+   * @param {{}} dataChange
    */
   editViolation = async (id, dataChange) => {
     let [err, result] = await to(
@@ -283,30 +280,43 @@ export class ViolationModel extends BaseModel {
   }
 
   /**
-   *
-   * @param {Date()} timeEndSearch
-   * @param {Number} status
+   * 
+   * @param {Date}} dateSearch 
+   * @param {'day'|'week'|'month'|'year'} timeline 
+   * @param {Number}} page 
+   * @param {Mongoose.Types.ObjectId} idCam 
    */
-  getStatistical = async (dateSearch, timeline) => {
+  getStatistical = async (dateSearch, timeline, page, idCam) => {
     console.log({ dateSearch })
-    let page = 1
     let arrDate = []
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < 100; i++) {
       let dateSubtract = moment(dateSearch).subtract(i, 'days').format('YYYY-MM-DD')
       arrDate.push(dateSubtract)
     }
     // console.log(arrDate)
 
     let arrWeek = []
-    for (let i = 0; i < 20; i++) {
+    for (let i = 0; i < 52; i++) {
       let dateSubtract = moment(dateSearch).subtract(i, 'weeks').format('YYYY-MM-DD')
       let date = moment(dateSubtract, 'YYYYMMDD').isoWeek()
-      arrWeek.push(date)
+      let dateFor
+      if(date > 1){
+        dateFor = {
+          week: date,
+          year: new Date(dateSearch).getFullYear() - 1
+        }
+      }else { 
+         dateFor = {
+          week: date,
+          year: new Date(dateSearch).getFullYear()
+        }
+      }
+      arrWeek.push(dateFor)
     }
-    // console.log(arrWeek)
+    console.log(arrWeek)
 
     let arrMonth = []
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < 40; i++) {
       let dateSubtract = moment(dateSearch).subtract(i, 'months').format('YYYY-MM')
       arrMonth.push(dateSubtract)
     }
@@ -317,12 +327,14 @@ export class ViolationModel extends BaseModel {
       let dateSubtract = moment(dateSearch).subtract(i, 'years').format('YYYY')
       arrYear.push(dateSubtract)
     }
-    console.log({ arrYear })
+    // console.log({ arrYear })
 
     const otherCondition = { deleted: { $ne: true } }
+    let idCamCondition = _.isEmpty(idCam) ? {} : { $or: { camera: mongoose.Types.ObjectId(idCam) } }
+
     const sortDateChose = _.isEmpty(_.toString(dateSearch)) ? {} : { $or: [{ vio_time: { $lte: new Date(dateSearch) } }] }
     const match = {
-      $match: { $and: [otherCondition, sortDateChose] },
+      $match: { $and: [otherCondition, sortDateChose, idCamCondition] },
     }
 
     const project = {
@@ -336,43 +348,46 @@ export class ViolationModel extends BaseModel {
       },
     }
 
-    let [errDay, timelineDay] = await to(
-      this.model.aggregate([
-        match,
-        {
-          $group: {
-            _id: { $dateToString: { format: '%Y-%m-%d', date: '$vio_time' } },
-            status1: {
-              $sum: { $cond: [{ $eq: ['$status', 1] }, 1, 0] },
-            },
-            status2: {
-              $sum: { $cond: [{ $eq: ['$status', 2] }, 1, 0] },
-            },
-            status3: {
-              $sum: { $cond: [{ $eq: ['$status', 3] }, 1, 0] },
-            },
-            status4: {
-              $sum: { $cond: [{ $eq: ['$status', 4] }, 1, 0] },
+    const data = []
+    if (timeline === 'day') {
+      let [errDay, timelineDay] = await to(
+        this.model.aggregate([
+          match,
+          {
+            $group: {
+              _id: { $dateToString: { format: '%Y-%m-%d', date: '$vio_time' } },
+              status1: {
+                $sum: { $cond: [{ $eq: ['$status', 1] }, 1, 0] },
+              },
+              status2: {
+                $sum: { $cond: [{ $eq: ['$status', 2] }, 1, 0] },
+              },
+              status3: {
+                $sum: { $cond: [{ $eq: ['$status', 3] }, 1, 0] },
+              },
+              status4: {
+                $sum: { $cond: [{ $eq: ['$status', 4] }, 1, 0] },
+              },
             },
           },
-        },
-        // { $sort: { _id: -1 } },
-        project,
-        { $group: { _id: null, stats: { $push: '$$ROOT' } } },
-        {
-          $project: {
-            stats: {
-              $map: {
-                input: arrDate,
-                as: 'time',
-                in: {
-                  $let: {
-                    vars: { dateIndex: { $indexOfArray: ['$stats._id', '$$time'] } },
-                    in: {
-                      $cond: {
-                        if: { $ne: ['$$dateIndex', -1] },
-                        then: { $arrayElemAt: ['$stats', '$$dateIndex'] },
-                        else: { _id: '$$time', time: '$$time', status1: 0, status2: 0, status3: 0, status4: 0 },
+          // { $sort: { _id: -1 } },
+          project,
+          { $group: { _id: null, stats: { $push: '$$ROOT' } } },
+          {
+            $project: {
+              stats: {
+                $map: {
+                  input: arrDate,
+                  as: 'time',
+                  in: {
+                    $let: {
+                      vars: { dateIndex: { $indexOfArray: ['$stats._id', '$$time'] } },
+                      in: {
+                        $cond: {
+                          if: { $ne: ['$$dateIndex', -1] },
+                          then: { $arrayElemAt: ['$stats', '$$dateIndex'] },
+                          else: { _id: '$$time', time: '$$time', status1: 0, status2: 0, status3: 0, status4: 0 },
+                        },
                       },
                     },
                   },
@@ -380,93 +395,108 @@ export class ViolationModel extends BaseModel {
               },
             },
           },
-        },
-        {
-          $unwind: '$stats',
-        },
-        {
-          $replaceRoot: {
-            newRoot: '$stats',
+          {
+            $unwind: '$stats',
           },
-        },
-        {
-          $project: { time: 1, status1: 1, status2: 1, status3: 1, status4: 1, _id: 0 },
-        },
-        // { $skip: _.toNumber(config.limitPerPage) * (page - 1) },
-        // { $limit: _.toNumber(config.limitPerPage) },
-      ])
-    )
-    if (errDay) throw errDay
-
-    let [errWeek, timelineWeek] = await to(
-      this.model.aggregate([
-        match,
-        {
-          $group: {
-            _id: { week: { $week: '$vio_time' }, year: { $year: '$vio_time' } },
-            status1: {
-              $sum: { $cond: [{ $eq: ['$status', 1] }, 1, 0] },
-            },
-            status2: {
-              $sum: { $cond: [{ $eq: ['$status', 2] }, 1, 0] },
-            },
-            status3: {
-              $sum: { $cond: [{ $eq: ['$status', 3] }, 1, 0] },
-            },
-            status4: {
-              $sum: { $cond: [{ $eq: ['$status', 4] }, 1, 0] },
+          {
+            $replaceRoot: {
+              newRoot: '$stats',
             },
           },
-        },
-        // { $sort: { _id: -1 } },
-        project,
-        // { $group: { _id: null, stats: { $push: '$$ROOT' } } },
+          {
+            $project: { time: 1, status1: 1, status2: 1, status3: 1, status4: 1, _id: 0 },
+          },
+          { $skip: _.toNumber(config.limitStatistical) * (page - 1) },
+          { $limit: _.toNumber(config.limitStatistical) },
+        ])
+      )
+      if (errDay) throw errDay
 
-        // { $skip: _.toNumber(config.limitPerPage) * (page - 1) },
-        // { $limit: _.toNumber(config.limitPerPage) },
-      ])
-    )
-    if (errWeek) throw timelineWeek
-
-
-    //month
-    let [errMonth, timelineMonth] = await to(
-      this.model.aggregate([
-        match,
-        {
-          $group: {
-            _id: { $dateToString: { format: '%Y-%m', date: '$vio_time' } },
-            status1: {
-              $sum: { $cond: [{ $eq: ['$status', 1] }, 1, 0] },
-            },
-            status2: {
-              $sum: { $cond: [{ $eq: ['$status', 2] }, 1, 0] },
-            },
-            status3: {
-              $sum: { $cond: [{ $eq: ['$status', 3] }, 1, 0] },
-            },
-            status4: {
-              $sum: { $cond: [{ $eq: ['$status', 4] }, 1, 0] },
+      // const dataDay = []
+      if (!_.isEmpty(timelineDay)) {
+        _.forEach(timelineDay, function (item) {
+          let dataFor = {
+            unapproved: item.status1,
+            approved: item.status2,
+            finishReport: item.status3,
+            finishPenal: item.status4,
+            count: item.status1 + item.status2 + item.status3 + item.status4,
+            time: moment(item.time).format('DD-MM-YYYY'),
+          }
+          data.push(dataFor)
+        })
+      }
+    } else if (timeline === 'week') {
+      let [errWeek, timelineWeek] = await to(
+        this.model.aggregate([
+          match,
+          {
+            $group: {
+              _id: { week: { $week: '$vio_time' }, year: { $year: '$vio_time' } },
+              status1: {
+                $sum: { $cond: [{ $eq: ['$status', 1] }, 1, 0] },
+              },
+              status2: {
+                $sum: { $cond: [{ $eq: ['$status', 2] }, 1, 0] },
+              },
+              status3: {
+                $sum: { $cond: [{ $eq: ['$status', 3] }, 1, 0] },
+              },
+              status4: {
+                $sum: { $cond: [{ $eq: ['$status', 4] }, 1, 0] },
+              },
             },
           },
-        },
-        // { $sort: { _id: -1 } },
-        project,
-        { $group: { _id: null, stats: { $push: '$$ROOT' } } },
-        {
-          $project: {
-            stats: {
-              $map: {
-                input: arrMonth,
-                as: 'time',
-                in: {
-                  $let: {
-                    vars: { dateIndex: { $indexOfArray: ['$stats._id', '$$time'] } },
-                    in: {
-                      $cond: {
-                        if: { $ne: ['$$dateIndex', -1] },
-                        then: { $arrayElemAt: ['$stats', '$$dateIndex'] },
-                        else: { _id: '$$time', status1: 0, status2: 0, status3: 0, status4: 0, time: '$$time' },
+          // { $sort: { _id: -1 } },
+          project,
+          // { $group: { _id: null, stats: { $push: '$$ROOT' } } },
+
+          // { $skip: _.toNumber(config.limitPerPage) * (page - 1) },
+          // { $limit: _.toNumber(config.limitPerPage) },
+        ])
+      )
+      if (errWeek) throw timelineWeek
+
+      data.push([...timelineWeek])
+    } else if (timeline === 'month') {
+      let [errMonth, timelineMonth] = await to(
+        this.model.aggregate([
+          match,
+          {
+            $group: {
+              _id: { $dateToString: { format: '%Y-%m', date: '$vio_time' } },
+              status1: {
+                $sum: { $cond: [{ $eq: ['$status', 1] }, 1, 0] },
+              },
+              status2: {
+                $sum: { $cond: [{ $eq: ['$status', 2] }, 1, 0] },
+              },
+              status3: {
+                $sum: { $cond: [{ $eq: ['$status', 3] }, 1, 0] },
+              },
+              status4: {
+                $sum: { $cond: [{ $eq: ['$status', 4] }, 1, 0] },
+              },
+            },
+          },
+          // { $sort: { _id: -1 } },
+          project,
+          { $group: { _id: null, stats: { $push: '$$ROOT' } } },
+          {
+            $project: {
+              stats: {
+                $map: {
+                  input: arrMonth,
+                  as: 'time',
+                  in: {
+                    $let: {
+                      vars: { dateIndex: { $indexOfArray: ['$stats._id', '$$time'] } },
+                      in: {
+                        $cond: {
+                          if: { $ne: ['$$dateIndex', -1] },
+                          then: { $arrayElemAt: ['$stats', '$$dateIndex'] },
+                          else: { _id: '$$time', status1: 0, status2: 0, status3: 0, status4: 0, time: '$$time' },
+                        },
                       },
                     },
                   },
@@ -474,85 +504,86 @@ export class ViolationModel extends BaseModel {
               },
             },
           },
-        },
-        {
-          $unwind: '$stats',
-        },
-        {
-          $replaceRoot: {
-            newRoot: '$stats',
+          {
+            $unwind: '$stats',
           },
-        },
-        {
-          $project: { time: 1, status1: 1, status2: 1, status3: 1, status4: 1, _id: 0 },
-        },
-        // { $skip: _.toNumber(config.limitPerPage) * (page - 1) },
-        // { $limit: _.toNumber(config.limitPerPage) },
-      ])
-    )
-    if (errMonth) throw errMonth
-
-    const addStartMonth = (dateStart) => {
-      const dateSear = `${new Date(dateSearch).getFullYear()}-${new Date(dateSearch).getMonth() + 1}`
-      if (moment(dateStart).isSame(dateSear, 'month')) {
-        console.log("đâsd")
-        return `${new Date(dateSearch).getFullYear()}-${new Date(dateSearch).getMonth() + 1}-${new Date(dateSearch).getDate()}`
-      } else return moment(dateStart).clone().startOf('month').format('YYYY-MM-DD')
-    }
-
-    const dataMonth = []
-    if (!_.isEmpty(timelineMonth)) {
-      _.forEach(timelineMonth, function (item) {
-        let dataFor = {
-          status1: item.status1,
-          status2: item.status2,
-          status3: item.status3,
-          status4: item.status4,
-          start: addStartMonth(item.time),
-          end: moment(item.time).clone().endOf('month').format('YYYY-MM-DD')
-        }
-        dataMonth.push(dataFor)
-      })
-    }
-    /// end month data == dataMonth
-
-    let [errYear, timelineYear] = await to(
-      this.model.aggregate([
-        match,
-        {
-          $group: {
-            _id: { $dateToString: { format: '%Y', date: '$vio_time' } },
-            status1: {
-              $sum: { $cond: [{ $eq: ['$status', 1] }, 1, 0] },
-            },
-            status2: {
-              $sum: { $cond: [{ $eq: ['$status', 2] }, 1, 0] },
-            },
-            status3: {
-              $sum: { $cond: [{ $eq: ['$status', 3] }, 1, 0] },
-            },
-            status4: {
-              $sum: { $cond: [{ $eq: ['$status', 4] }, 1, 0] },
+          {
+            $replaceRoot: {
+              newRoot: '$stats',
             },
           },
-        },
-        // { $sort: { _id: -1 } },
-        project,
-        { $group: { _id: null, stats: { $push: '$$ROOT' } } },
-        {
-          $project: {
-            stats: {
-              $map: {
-                input: arrYear,
-                as: 'time',
-                in: {
-                  $let: {
-                    vars: { dateIndex: { $indexOfArray: ['$stats._id', '$$time'] } },
-                    in: {
-                      $cond: {
-                        if: { $ne: ['$$dateIndex', -1] },
-                        then: { $arrayElemAt: ['$stats', '$$dateIndex'] },
-                        else: { _id: '$$time', status1: 0, status2: 0, status3: 0, status4: 0, time: '$$time' },
+          {
+            $project: { time: 1, status1: 1, status2: 1, status3: 1, status4: 1, _id: 0 },
+          },
+          { $skip: _.toNumber(config.limitStatistical) * (page - 1) },
+          { $limit: _.toNumber(config.limitStatistical) },
+        ])
+      )
+      if (errMonth) throw errMonth
+
+      const addStartMonth = (dateStart) => {
+        // const dateSear = `${new Date(dateSearch).getFullYear()}/${new Date(dateSearch).getMonth() + 1}`
+        // console.log({ dateSear })
+        // console.log(moment(dateStart).isSame(dateSearch, 'month'))
+        if (moment(dateStart).isSame(dateSearch, 'month')) {
+          return `${new Date(dateSearch).getDate()}-${new Date(dateSearch).getMonth() + 1}-${new Date(dateSearch).getFullYear()}`
+        } else return moment(dateStart).clone().endOf('month').format('DD-MM-YYYY')
+      }
+
+      if (!_.isEmpty(timelineMonth)) {
+        _.forEach(timelineMonth, function (item) {
+          let dataFor = {
+            unapproved: item.status1,
+            approved: item.status2,
+            finishReport: item.status3,
+            finishPenal: item.status4,
+            count: item.status1 + item.status2 + item.status3 + item.status4,
+            time: `${addStartMonth(item.time)} - ${moment(item.time).clone().startOf('month').format('DD-MM-YYYY')}`,
+            // start: addStartMonth(item.time),
+            // end: moment(item.time).clone().startOf('month').format('YYYY-MM-DD'),
+          }
+          data.push(dataFor)
+        })
+      }
+    } else if (timeline === 'year') {
+      let [errYear, timelineYear] = await to(
+        this.model.aggregate([
+          match,
+          {
+            $group: {
+              _id: { $dateToString: { format: '%Y', date: '$vio_time' } },
+              status1: {
+                $sum: { $cond: [{ $eq: ['$status', 1] }, 1, 0] },
+              },
+              status2: {
+                $sum: { $cond: [{ $eq: ['$status', 2] }, 1, 0] },
+              },
+              status3: {
+                $sum: { $cond: [{ $eq: ['$status', 3] }, 1, 0] },
+              },
+              status4: {
+                $sum: { $cond: [{ $eq: ['$status', 4] }, 1, 0] },
+              },
+            },
+          },
+          // { $sort: { _id: -1 } },
+          project,
+          { $group: { _id: null, stats: { $push: '$$ROOT' } } },
+          {
+            $project: {
+              stats: {
+                $map: {
+                  input: arrYear,
+                  as: 'time',
+                  in: {
+                    $let: {
+                      vars: { dateIndex: { $indexOfArray: ['$stats._id', '$$time'] } },
+                      in: {
+                        $cond: {
+                          if: { $ne: ['$$dateIndex', -1] },
+                          then: { $arrayElemAt: ['$stats', '$$dateIndex'] },
+                          else: { _id: '$$time', status1: 0, status2: 0, status3: 0, status4: 0, time: '$$time' },
+                        },
                       },
                     },
                   },
@@ -560,45 +591,47 @@ export class ViolationModel extends BaseModel {
               },
             },
           },
-        },
-        {
-          $unwind: '$stats',
-        },
-        {
-          $replaceRoot: {
-            newRoot: '$stats',
+          {
+            $unwind: '$stats',
           },
-        },
-        {
-          $project: { time: 1, status1: 1, status2: 1, status3: 1, status4: 1, _id: 0 },
-        },
-        // { $skip: _.toNumber(config.limitPerPage) * (page - 1) },
-        // { $limit: _.toNumber(config.limitPerPage) },
-      ])
-    )
-    if (errYear) throw errYear
+          {
+            $replaceRoot: {
+              newRoot: '$stats',
+            },
+          },
+          {
+            $project: { time: 1, status1: 1, status2: 1, status3: 1, status4: 1, _id: 0 },
+          },
+          { $skip: _.toNumber(config.limitStatistical) * (page - 1) },
+          { $limit: _.toNumber(config.limitStatistical) },
+        ])
+      )
+      if (errYear) throw errYear
 
-    const addStartYear = (dateStart) => {
-      const dateSear = `${new Date(dateSearch).getFullYear()}`
-      if (moment(dateStart).isSame(dateSear, 'month')) {
-        return `${new Date(dateSearch).getFullYear()}-${new Date(dateSearch).getMonth() + 1}-${new Date(dateSearch).getDate()}`
-      } else return moment(dateStart).clone().startOf('year').format('YYYY-MM-DD')
+      const addStartYear = (dateStart) => {
+        const dateSear = `${new Date(dateSearch).getFullYear()}`
+        if (moment(dateStart).isSame(dateSear, 'month')) {
+          return `${new Date(dateSearch).getDate()}-${new Date(dateSearch).getMonth() + 1}-${new Date(dateSearch).getFullYear()}`
+        } else return moment(dateStart).clone().endOf('year').format('DD-MM-YYYY')
+      }
+
+      if (!_.isEmpty(timelineYear)) {
+        _.forEach(timelineYear, function (item) {
+          let dataFor = {
+            unapproved: item.status1,
+            approved: item.status2,
+            finishReport: item.status3,
+            finishPenal: item.status4,
+            count: item.status1 + item.status2 + item.status3 + item.status4,
+            time: `${addStartYear(item.time)} - ${moment(item.time).clone().startOf('year').format('DD-MM-YYYY')}`,
+            // start: addStartYear(item.time),
+            // end: moment(item.time).clone().startOf('year').format('DD-MM-YYYY'),
+          }
+          data.push(dataFor)
+        })
+      }
     }
 
-    const dataYear = []
-    if (!_.isEmpty(timelineYear)) {
-      _.forEach(timelineYear, function (item) {
-        let dataFor = {
-          status1: item.status1,
-          status2: item.status2,
-          status3: item.status3,
-          status4: item.status4,
-          start: addStartYear(item.time),
-          end: moment(item.time).clone().endOf('year').format('YYYY-MM-DD')
-        }
-        dataYear.push(dataFor)
-      })
-    }
-    return dataYear
+    return data
   }
 }

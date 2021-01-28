@@ -227,15 +227,24 @@ export const violationRouter = (router) => {
 
   router.post('/violations/statistical', async (req, res, next) => {
     try {
-      const { day, timeline } = req.body
+      const { day, timeline, page, idCam } = req.body
 
+      if (!day || !timeline || !page) {
+        throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Kiểm tra gía trị thiếu trường thông tin' })
+      }
+
+      if(idCam){
+        if (!validator.isMongoId(idCam)) {
+          throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Vi phạm không hợp lệ' })
+        }
+      }
       // if (timeline && !_.isEmpty(timeline)) {
       //   if (!validator.inTimeline(timeline)) {
       //     throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'TimeLine không hợp lệ ' })
       //   }
       // }
 
-      const result = await app.violation.getStatistical(day, timeline)
+      const result = await app.violation.getStatistical(day, timeline, page, idCam)
 
       res.json(result)
     } catch (error) {
