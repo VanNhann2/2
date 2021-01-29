@@ -280,11 +280,11 @@ export class ViolationModel extends BaseModel {
   }
 
   /**
-   * 
-   * @param {Date}} dateSearch 
-   * @param {'day'|'week'|'month'|'year'} timeline 
-   * @param {Number}} page 
-   * @param {Mongoose.Types.ObjectId} idCam 
+   *
+   * @param {Date}} dateSearch
+   * @param {'day'|'week'|'month'|'year'} timeline
+   * @param {Number}} page
+   * @param {Mongoose.Types.ObjectId} idCam
    */
   getStatistical = async (dateSearch, timeline, page, idCam) => {
     console.log({ dateSearch })
@@ -296,24 +296,55 @@ export class ViolationModel extends BaseModel {
     // console.log(arrDate)
 
     let arrWeek = []
-    for (let i = 0; i < 52; i++) {
+    for (let i = 0; i < 100; i++) {
       let dateSubtract = moment(dateSearch).subtract(i, 'weeks').format('YYYY-MM-DD')
-      let date = moment(dateSubtract, 'YYYYMMDD').isoWeek()
-      let dateFor
-      if(date > 1){
-        dateFor = {
-          week: date,
-          year: new Date(dateSearch).getFullYear() - 1
-        }
-      }else { 
-         dateFor = {
-          week: date,
-          year: new Date(dateSearch).getFullYear()
-        }
-      }
-      arrWeek.push(dateFor)
+      // console.log({ dateSubtract })
+      let date = moment(dateSearch - 1, 'YYYYMMDD').isoWeek()
+      // let dateFor
+      // if (date > 1) {
+      //   dateFor = {
+      //     week: date,
+      //     year: new Date(dateSearch).getFullYear() - 1,
+      //   }
+      // } else {
+      //   dateFor = {
+      //     week: date,
+      //     year: new Date(dateSearch).getFullYear(),
+      //   }
+      // }
+      arrWeek.push(date)
     }
-    console.log(arrWeek)
+    // let arrWeek1
+    // let arrWeek2
+    let arrWeek1 = arrWeek.slice(0, _.indexOf(arrWeek, 1) + 1)
+    let arrWeek2 = arrWeek.slice(_.indexOf(arrWeek, 1) + 1)
+    let arrWeek3
+    console.log({ arrWeek })
+    console.log({ arrWeek2 })
+
+    if (arrWeek2.length > 52) {
+      arrWeek3 = arrWeek2.slice(_.indexOf(arrWeek2, 1) + 1)
+    }
+    console.log({ arrWeek3 })
+    let dataWeek1 = []
+    _.forEach(arrWeek1, function (x) {
+      let arr = {
+        week: x,
+        year: new Date(dateSearch).getFullYear(),
+      }
+      dataWeek1.push(arr)
+    })
+    let dataWeek2 = []
+    _.forEach(arrWeek2, function (x) {
+      let arr = {
+        week: x,
+        year: new Date(dateSearch).getFullYear() - 1,
+      }
+      dataWeek2.push(arr)
+    })
+    let dataWeek = [...dataWeek1, ...dataWeek2]
+    // console.log({ dataWeek1 })
+    // console.log({ dataWeek2 })
 
     let arrMonth = []
     for (let i = 0; i < 40; i++) {
@@ -330,7 +361,7 @@ export class ViolationModel extends BaseModel {
     // console.log({ arrYear })
 
     const otherCondition = { deleted: { $ne: true } }
-    let idCamCondition = _.isEmpty(idCam) ? {} : { $or: { camera: mongoose.Types.ObjectId(idCam) } }
+    let idCamCondition = _.isEmpty(idCam) ? {} : { $or: [{ camera: mongoose.Types.ObjectId(idCam) }] }
 
     const sortDateChose = _.isEmpty(_.toString(dateSearch)) ? {} : { $or: [{ vio_time: { $lte: new Date(dateSearch) } }] }
     const match = {
@@ -348,7 +379,7 @@ export class ViolationModel extends BaseModel {
       },
     }
 
-    const data = []
+    let data
     if (timeline === 'day') {
       let [errDay, timelineDay] = await to(
         this.model.aggregate([
@@ -411,7 +442,7 @@ export class ViolationModel extends BaseModel {
         ])
       )
       if (errDay) throw errDay
-
+      let arrData = []
       // const dataDay = []
       if (!_.isEmpty(timelineDay)) {
         _.forEach(timelineDay, function (item) {
@@ -423,41 +454,15 @@ export class ViolationModel extends BaseModel {
             count: item.status1 + item.status2 + item.status3 + item.status4,
             time: moment(item.time).format('DD-MM-YYYY'),
           }
-          data.push(dataFor)
+          arrData.push(dataFor)
         })
+        data = {
+          data: arrData || [],
+          totalPage: Math.ceil(arrDate.length / config.limitStatistical) || 0,
+        }
       }
     } else if (timeline === 'week') {
-      let [errWeek, timelineWeek] = await to(
-        this.model.aggregate([
-          match,
-          {
-            $group: {
-              _id: { week: { $week: '$vio_time' }, year: { $year: '$vio_time' } },
-              status1: {
-                $sum: { $cond: [{ $eq: ['$status', 1] }, 1, 0] },
-              },
-              status2: {
-                $sum: { $cond: [{ $eq: ['$status', 2] }, 1, 0] },
-              },
-              status3: {
-                $sum: { $cond: [{ $eq: ['$status', 3] }, 1, 0] },
-              },
-              status4: {
-                $sum: { $cond: [{ $eq: ['$status', 4] }, 1, 0] },
-              },
-            },
-          },
-          // { $sort: { _id: -1 } },
-          project,
-          // { $group: { _id: null, stats: { $push: '$$ROOT' } } },
-
-          // { $skip: _.toNumber(config.limitPerPage) * (page - 1) },
-          // { $limit: _.toNumber(config.limitPerPage) },
-        ])
-      )
-      if (errWeek) throw timelineWeek
-
-      data.push([...timelineWeek])
+      // arrDate.push([...timelineWeek])
     } else if (timeline === 'month') {
       let [errMonth, timelineMonth] = await to(
         this.model.aggregate([
@@ -531,6 +536,7 @@ export class ViolationModel extends BaseModel {
       }
 
       if (!_.isEmpty(timelineMonth)) {
+        let arrData = []
         _.forEach(timelineMonth, function (item) {
           let dataFor = {
             unapproved: item.status1,
@@ -542,8 +548,12 @@ export class ViolationModel extends BaseModel {
             // start: addStartMonth(item.time),
             // end: moment(item.time).clone().startOf('month').format('YYYY-MM-DD'),
           }
-          data.push(dataFor)
+          arrData.push(dataFor)
         })
+        data = {
+          data: arrData || [],
+          totalPage: Math.ceil(arrMonth.length / config.limitStatistical) || 0,
+        }
       }
     } else if (timeline === 'year') {
       let [errYear, timelineYear] = await to(
@@ -616,6 +626,7 @@ export class ViolationModel extends BaseModel {
       }
 
       if (!_.isEmpty(timelineYear)) {
+        let arrData = []
         _.forEach(timelineYear, function (item) {
           let dataFor = {
             unapproved: item.status1,
@@ -627,11 +638,80 @@ export class ViolationModel extends BaseModel {
             // start: addStartYear(item.time),
             // end: moment(item.time).clone().startOf('year').format('DD-MM-YYYY'),
           }
-          data.push(dataFor)
+          arrData.push(dataFor)
         })
+        data = {
+          data: arrData || [],
+          totalPage: Math.ceil(arrYear.length / config.limitStatistical) || 0,
+        }
       }
     }
 
-    return data
+    // let arrDate = []
+    let [errWeek, timelineWeek] = await to(
+      this.model.aggregate([
+        match,
+        {
+          $group: {
+            _id: { week: { $week: '$vio_time' }, year: { $year: '$vio_time' } },
+            status1: {
+              $sum: { $cond: [{ $eq: ['$status', 1] }, 1, 0] },
+            },
+            status2: {
+              $sum: { $cond: [{ $eq: ['$status', 2] }, 1, 0] },
+            },
+            status3: {
+              $sum: { $cond: [{ $eq: ['$status', 3] }, 1, 0] },
+            },
+            status4: {
+              $sum: { $cond: [{ $eq: ['$status', 4] }, 1, 0] },
+            },
+          },
+        },
+        // { $sort: { _id: -1 } },
+        project,
+        { $group: { _id: null, stats: { $push: '$$ROOT' } } },
+        {
+          $project: {
+            stats: {
+              $map: {
+                input: dataWeek,
+                as: 'time',
+                in: {
+                  $let: {
+                    vars: { dateIndex: { $indexOfArray: ['$stats._id', '$$time'] } },
+                    in: {
+                      $cond: {
+                        if: { $ne: ['$$dateIndex', -1] },
+                        then: { $arrayElemAt: ['$stats', '$$dateIndex'] },
+                        else: { _id: '$$time', time: '$$time', status1: 0, status2: 0, status3: 0, status4: 0 },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        {
+          $unwind: '$stats',
+        },
+        {
+          $replaceRoot: {
+            newRoot: '$stats',
+          },
+        },
+        {
+          $project: { time: 1, status1: 1, status2: 1, status3: 1, status4: 1, _id: 0 },
+        },
+        // { $group: { _id: null, stats: { $push: '$$ROOT' } } },
+
+        // { $skip: _.toNumber(config.limitPerPage) * (page - 1) },
+        // { $limit: _.toNumber(config.limitPerPage) },
+      ])
+    )
+    if (errWeek) throw errWeek
+
+    return timelineWeek
   }
 }

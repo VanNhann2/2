@@ -74,20 +74,20 @@ export const violationRouter = (router) => {
     }
   })
 
-  router.get('/violations/:id', async (req, res, next) => {
-    try {
-      const { id } = req.params
-      const { platform } = null
+  // router.get('/violations/:id', async (req, res, next) => {
+  //   try {
+  //     const { id } = req.params
+  //     const { platform } = null
 
-      if (!validator.isMongoId(id)) {
-        throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Vi phạm không hợp lệ' })
-      }
-      const result = await app.violation.getById(id, platform)
-      res.json(result)
-    } catch (error) {
-      next(error)
-    }
-  })
+  //     if (!validator.isMongoId(id)) {
+  //       throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Vi phạm không hợp lệ' })
+  //     }
+  //     const result = await app.violation.getById(id, platform)
+  //     res.json(result)
+  //   } catch (error) {
+  //     next(error)
+  //   }
+  // })
 
   router.get('/public/violations/:id', async (req, res, next) => {
     try {
