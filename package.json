@@ -21,14 +21,15 @@
     "eslint-config-prettier": "^6.10.1"
   },
   "dependencies": {
-    "await-to-js": "^2.1.1",
-    "babel-plugin-module-resolver": "^4.1.0",
     "@grpc/grpc-js": "^1.2.1",
     "@grpc/proto-loader": "^0.5.3",
+    "await-to-js": "^2.1.1",
+    "babel-plugin-module-resolver": "^4.1.0",
     "chalk": "^4.1.0",
     "cookie-parser": "^1.4.5",
     "cors": "^2.8.5",
     "dotenv": "^8.2.0",
+    "exceljs": "^4.2.0",
     "express": "^4.17.1",
     "http-status-codes": "^2.1.4",
     "lodash": "^4.17.20",

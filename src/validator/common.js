@@ -23,18 +23,22 @@ export const isMongoIdArray = (ids) => {
   return true
 }
 
-export const inObject = (object) => {
+export const isValidVehicleType = (object) => {
   if (object) {
-    let arrayObject = ['bike', 'bus', 'car', 'miniBus', 'truck']
+    let arrayObject = ['all', 'bike', 'bus', 'car', 'miniBus', 'truck']
     return _.includes(arrayObject, object)
   }
+  return true
 }
 
-export const inTimeline = (timeline) => {
+export const isValidTimelineType = (timeline) => {
   let arrayTimeline = ['day', 'week', 'month', 'year']
-  if (_.includes(arrayTimeline, timeline)) {
-    return true
-  }
+  return _.includes(arrayTimeline, timeline)
+}
+
+export const defineTimeline = (timeline) => {
+  let arrTimelineDefine = { day: 'ngay', week: 'tuan', month: 'thang', year: 'nam' }
+  return arrTimelineDefine[timeline]
 }
 
 export const inStatusStatistical = (status) => {
@@ -44,7 +48,7 @@ export const inStatusStatistical = (status) => {
   }
 }
 
-export const inStatus = (status) => {
+export const isValidStatusType = (status) => {
   if (status) {
     let arrayStatus = ['unapproved', 'approved', 'finishReport', 'finishPenal', 'expired']
     return _.includes(arrayStatus, status)
@@ -72,4 +76,17 @@ export const defineObject = (object) => {
 export const defineStatus = (status) => {
   let defineStatus = { 0: '', 1: 'Chưa duyệt', 2: 'Đã duyệt', 3: 'Đã xuất biên bản', 4: 'Đã hoàn thành xử phạt', 5: 'Quá hạn' }
   return defineStatus[status]
+}
+
+export const verifyPlate = (plate) => {
+  if (plate) {
+    console.log({ plate })
+    let patternCar = /[0-9]{2}[A-Z]-[0-9]{5}$/i
+    let patternBike = /[0-9]{2}-[A-Z][0-9][0-9]{5}$/i
+    if (plate.match(patternCar) || plate.match(patternBike) ) {
+      return true
+    }
+    return false
+  }
+  return true
 }

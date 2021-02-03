@@ -2,17 +2,15 @@ import to from 'await-to-js'
 import StatusCodes from 'http-status-codes'
 import { model } from '../models'
 import { AppError, logger } from '../utils'
-import mongoose from 'mongoose'
+import mongoose, { Mongoose } from 'mongoose'
 import _ from 'lodash'
 import PDFDocument from 'pdfkit'
 import fs, { stat } from 'fs'
 import path from 'path'
-import { RequestError } from '../utils'
-import { validate } from 'uuid'
 import * as validator from '../validator'
 import { GRpcClient } from '../services/grpc'
 import { config } from '../configs'
-import moment from 'moment'
+import ExcelJs from 'exceljs'
 import { replaceImage } from '../utils'
 
 export class Violation {
@@ -20,29 +18,29 @@ export class Violation {
   // #grpcClient = undefined
 
   constructor() {
-    this.perPage = 10
     this.arrayObject = ['bike', 'bus', 'car', 'miniBus', 'truck']
     this.arrayStatus = ['unapproved', 'approved', 'finishReport', 'finishPenal', 'expired']
 
     // const protoFile = path.join(__dirname, config.protoFile);
-
     // this.#grpcClient = new GRpcClient('10.49.46.251:50052', config.protoFile, 'parking.Camera')
     // this.#grpcClient = new GRpcClient('10.49.46.23:50055', config.protoFile, 'parking.Video')
   }
 
   /**
    *
-   * @param {Number} object
-   * @param {Number} status
+   * @param {[]} idsCamera
+   * @param {String} object
+   * @param {String} status
    * @param {String} plate
    * @param {Date} startDate
    * @param {Date} endDate
    * @param {String} page
+   * @param {'web'|'mobile'} platform
+   * @param {Boolean} plateOnly
    */
   /** Get all violations */
-  getAll = async (idsCamera, object, status, plate, startDate, endDate, page, platform) => {
+  getAll = async (idsCamera, object, status, plate, startDate, endDate, page, platform, plateOnly) => {
     try {
-      // let perPage = 10
       let vioObject = _.includes(this.arrayObject, object) ? _.indexOf(this.arrayObject, object) : undefined
       let vioStatus = _.includes(this.arrayStatus, status) ? _.indexOf(this.arrayStatus, status) + 1 : undefined
 
@@ -51,7 +49,9 @@ export class Violation {
       const vioPlate = plate ? plateConverArray : undefined
       const startSearchDate = startDate && startDate != '' && startDate != 'null' ? new Date(startDate).toISOString() : undefined
       const endSearchDate = endDate && endDate != '' && endDate != 'null' ? new Date(endDate).toISOString() : undefined
-      let [err, conditions] = await to(model.violation.conditions(idsCamera, vioObject, vioStatus, vioPlate, startSearchDate, endSearchDate, page, platform))
+      let [err, conditions] = await to(
+        model.violation.conditions(idsCamera, vioObject, vioStatus, vioPlate, startSearchDate, endSearchDate, page, platform, plateOnly)
+      )
       if (err) throw err
 
       const dataPromise = model.violation.getAll(conditions.conditionsData)
@@ -66,61 +66,37 @@ export class Violation {
       totalDt = results[1]
 
       const totalRecord = totalDt[0]?.myCount || 0
-      const totalPage = Math.ceil(totalRecord / this.perPage) || 0
+      const totalPage = Math.ceil(totalRecord / config.limitPerPage) || 0
 
       let dataResult = pageDt ? pageDt : []
 
-      // data for admin// pageData la do front end da dung bien pageData nen data cua web public la pageData
       let pageData = []
-      if (platform === 'web') {
-        if (!_.isEmpty(dataResult)) {
-          _.forEach(dataResult, function (item) {
-            let dataFor = {
-              id: item.id,
-              action: item.action,
-              object: item.object,
-              status: item.status,
-              plate: item.plate,
-              camera: item.camera,
-              images: replaceImage(item.images, platform),
-              objectImages: replaceImage(item.objectImages, platform),
-              plateImages: replaceImage(item.plateImages, platform),
-              vioTime: item.vioTime,
-              alprTime: item.alprTime,
-              email: item.email,
-              owner: item.owner,
-              phone: item.phone,
-            }
-            pageData.push(dataFor)
-          })
-        }
-      } else {
-        if (!_.isEmpty(dataResult)) {
-          _.forEach(dataResult, function (item) {
-            let dataFor = {
-              id: item.id,
-              action: item.action,
-              object: item.object,
-              status: item.status,
-              plate: item.plate,
-              camera: item.camera,
-              images: replaceImage(item.images, platform),
-              objectImages: replaceImage(item.objectImages, platform),
-              plateImages: replaceImage(item.plateImages, platform),
-              vioTime: item.vioTime,
-              alprTime: item.alprTime,
-              email: item.email,
-              owner: item.owner,
-              phone: item.phone,
-            }
-            pageData.push(dataFor)
-          })
-        }
-      }
-
-      // data mobile public
       let data = []
-      if (platform === 'mobile') {
+      if (platform === 'web') {
+        // data web public
+        if (!_.isEmpty(dataResult)) {
+          _.forEach(dataResult, function (item) {
+            let dataFor = {
+              id: item.id,
+              action: item.action,
+              object: item.object,
+              status: item.status,
+              plate: item.plate,
+              camera: item.camera,
+              images: replaceImage(item.images, platform),
+              objectImages: replaceImage(item.objectImages, platform),
+              plateImages: replaceImage(item.plateImages, platform),
+              vioTime: item.vioTime,
+              alprTime: item.alprTime,
+              email: item.email,
+              owner: item.owner,
+              phone: item.phone,
+            }
+            pageData.push(dataFor)
+          })
+        }
+      } else if (platform === 'mobile') {
+        // data mobile public  ---- Duong bat buoc phai tra ve data, perPage, total (mac dinh la pageData, totalRecord, totalPage)
         let convertData = pageDt ? pageDt : []
         if (!_.isEmpty(convertData)) {
           _.forEach(convertData, function (item) {
@@ -134,6 +110,29 @@ export class Violation {
               vioTime: item.vioTime,
             }
             data.push(dataDetail)
+          })
+        }
+      } else {
+        // data trang admin//
+        if (!_.isEmpty(dataResult)) {
+          _.forEach(dataResult, function (item) {
+            let dataFor = {
+              id: item.id,
+              action: item.action,
+              object: item.object,
+              status: item.status,
+              plate: item.plate,
+              camera: item.camera,
+              images: replaceImage(item.images, platform),
+              objectImages: replaceImage(item.objectImages, platform),
+              plateImages: replaceImage(item.plateImages, platform),
+              vioTime: item.vioTime,
+              alprTime: item.alprTime,
+              email: item.email,
+              owner: item.owner,
+              phone: item.phone,
+            }
+            pageData.push(dataFor)
           })
         }
       }
@@ -162,6 +161,7 @@ export class Violation {
   /**
    *
    * @param {mongoose.Types.ObjectId} id
+   * @param {'mobile'} platform
    */
   getById = async (id, platform) => {
     try {
@@ -194,7 +194,7 @@ export class Violation {
    */
   updateApproval = async (ids, action) => {
     try {
-      if (!validator.inStatus(action)) {
+      if (!validator.isValidStatusType(action)) {
         throw new AppError('invalid action')
       }
       console.log(ids, action)
@@ -405,8 +405,10 @@ export class Violation {
 
   /**
    *
-   * @param {Date} date
+   * @param {Date} day
    * @param {'day'|'week'|'month'|'year'} timeline
+   * @param {Number} page
+   * @param {String} idCam
    */
   getStatistical = async (day, timeline, page, idCam) => {
     try {
@@ -419,6 +421,79 @@ export class Violation {
     } catch (error) {
       logger.error('Violations.getStatistical() error:', error)
       throw new AppError({ code: StatusCodes.INTERNAL_SERVER_ERROR, message: 'Lấy thông tin thống kê thất bại' })
+    }
+  }
+
+  /**
+   *
+   * @param {Date} day
+   * @param {'day'|'week'|'month'|'year'} timeline
+   * @param {Number} page
+   * @param {Mongoose.Types.ObjectId(string)} idCam
+   * @param {String} nameCam
+   * @param {*} res
+   */
+  reportStatisticalExcel = async (day, timeline, page, idCam, nameCam) => {
+    try {
+      console.log({ timeline })
+      console.log({ page })
+
+      let dateSearch = new Date(day)
+      console.log({ dateSearch })
+
+      let workbook = new ExcelJs.Workbook()
+      let worksheet = workbook.addWorksheet('Báo cáo thống kê vi phạm')
+
+      worksheet.getColumn(1).width = 10
+      worksheet.getColumn(1).alignment = { horizontal: 'center', vertical: 'distributed' }
+      worksheet.getCell('A1').value = 'STT'
+      worksheet.getCell('A1').alignment = { horizontal: 'center', vertical: 'distributed' }
+
+      worksheet.getColumn(2).width = 25
+      worksheet.getColumn(2).alignment = { horizontal: 'center', vertical: 'distributed' }
+      worksheet.getCell('B1').value = 'Thời gian'
+      worksheet.getCell('B1').alignment = { horizontal: 'center', vertical: 'distributed' }
+
+      worksheet.getColumn(3).width = 30
+      worksheet.getColumn(3).alignment = { horizontal: 'center', vertical: 'distributed' }
+      worksheet.getCell('C1').value = 'Camera'
+      worksheet.getCell('C1').alignment = { horizontal: 'center', vertical: 'distributed' }
+
+      worksheet.getColumn(3).width = 20
+      worksheet.getColumn(3).alignment = { horizontal: 'center', vertical: 'distributed' }
+      worksheet.getCell('D1').value = 'Tổng vi phạm'
+      worksheet.getCell('D1').alignment = { horizontal: 'center', vertical: 'distributed' }
+
+      worksheet.getColumn(4).width = 40
+      worksheet.getColumn(4).alignment = { horizontal: 'center', vertical: 'distributed' }
+      worksheet.getCell('E1').value = 'Tổng vi phạm đã gửi thông báo'
+      worksheet.getCell('E1').alignment = { horizontal: 'center', vertical: 'distributed' }
+
+      worksheet.getColumn(5).width = 35
+      worksheet.getColumn(5).alignment = { horizontal: 'center', vertical: 'distributed' }
+      worksheet.getCell('F1').value = 'Tổng vi phạm đã xử phạt'
+      worksheet.getCell('F1').alignment = { horizontal: 'center', vertical: 'distributed' }
+
+      let [err, data] = await to(model.violation.getStatistical(dateSearch, timeline, page, idCam))
+      if (err) throw err
+
+      let order = 1
+      _.forEach(data.data, (item) => {
+        let row = []
+        row.push(order)
+        row.push(item.time)
+        row.push(nameCam ? nameCam : '')
+        row.push(item.total)
+        row.push(item.finishReport)
+        row.push(item.finishPenal)
+        worksheet.addRow(row)
+        order++
+      })
+
+      return workbook
+    } catch (error) {
+      logger.error('Violations.getStatistical() error:', error)
+      throw new AppError({ code: StatusCodes.INTERNAL_SERVER_ERROR, message: 'Xuất báo cáo thống kê thất bại' })
     }
   }
 }

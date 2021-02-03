@@ -9,7 +9,7 @@ export const replaceImage = (image, platform) => {
   let arrayImage = []
   if (platform === 'mobile') {
     _.forEach(image, function (item) {
-      arrayImage.push(config.LinkImageMobile + replacePath(item))
+      arrayImage.push(config.linkImageMobile + replacePath(item))
     })
   } else {
     _.forEach(image, function (item) {

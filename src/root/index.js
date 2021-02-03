@@ -33,7 +33,7 @@ export class Root {
     logger.info('Stopping database client...')
     await this.#database.stop()
 
-    logger.info('Stopping gRPC server...')
+    // logger.info('Stopping gRPC server...')
   }
 
   #registerSignal = () => {
