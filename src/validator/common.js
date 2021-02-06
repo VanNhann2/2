@@ -50,7 +50,7 @@ export const inStatusStatistical = (status) => {
 
 export const isValidStatusType = (status) => {
   if (status) {
-    let arrayStatus = ['unapproved', 'approved', 'finishReport', 'finishPenal', 'expired']
+    let arrayStatus = ['all', 'unapproved', 'approved', 'finishReport', 'finishPenal', 'expired']
     return _.includes(arrayStatus, status)
   }
   return true
@@ -79,13 +79,15 @@ export const defineStatus = (status) => {
 }
 
 export const verifyPlate = (plate) => {
-  if (plate) {
-    console.log({ plate })
-    let patternCar = /[0-9]{2}[A-Z]-[0-9]{5}$/i
-    let patternBike = /[0-9]{2}-[A-Z][0-9][0-9]{5}$/i
-    if (plate.match(patternCar) || plate.match(patternBike) ) {
-      return true
-    }
+  // if (plate) {
+  //   let patternCar = /[0-9]{2}[A-Z]-[0-9]{5}$/i
+  //   let patternBike = /[0-9]{2}-[A-Z][0-9][0-9]{5}$/i
+  //   if (plate.match(patternCar) || plate.match(patternBike) ) {
+  //     return true
+  //   }
+  //   return false
+  // }
+  if (_.toString(plate).length > 12) {
     return false
   }
   return true

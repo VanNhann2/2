@@ -466,7 +466,12 @@ export class ViolationModel extends BaseModel {
         })
         data = {
           data: arrData || [],
-          totalPage: Math.ceil(arrDate.length / config.limitStatistical) || 0,
+          totalPage: Math.ceil(arrDate.length / config.limitStatistical) || 1,
+        }
+      } else {
+        data = {
+          data: [],
+          totalPage: 1,
         }
       }
     } else if (timeline === 'week') {
@@ -558,7 +563,12 @@ export class ViolationModel extends BaseModel {
         })
         data = {
           data: arrData || [],
-          totalPage: Math.ceil(arrWeek.length / config.limitStatistical) || 0,
+          totalPage: Math.ceil(arrWeek.length / config.limitStatistical) || 1,
+        }
+      } else {
+        data = {
+          data: [],
+          totalPage: 1,
         }
       }
       // arrDate.push([...timelineWeek])
@@ -646,7 +656,12 @@ export class ViolationModel extends BaseModel {
         })
         data = {
           data: arrData || [],
-          totalPage: Math.ceil(arrMonth.length / config.limitStatistical) || 0,
+          totalPage: Math.ceil(arrMonth.length / config.limitStatistical) || 1,
+        }
+      } else {
+        data = {
+          data: [],
+          totalPage: 1,
         }
       }
     } else if (timeline === 'year') {
@@ -734,11 +749,16 @@ export class ViolationModel extends BaseModel {
         })
         data = {
           data: arrData || [],
-          totalPage: Math.ceil(arrYear.length / config.limitStatistical) || 0,
+          totalPage: Math.ceil(arrYear.length / config.limitStatistical) || 1,
+        }
+      } else {
+        data = {
+          data: [],
+          totalPage: 1,
         }
       }
     }
 
-    return data
+    return data ? data : []
   }
 }

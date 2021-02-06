@@ -42,7 +42,12 @@ export class Violation {
   getAll = async (idsCamera, object, status, plate, startDate, endDate, page, platform, plateOnly) => {
     try {
       let vioObject = _.includes(this.arrayObject, object) ? _.indexOf(this.arrayObject, object) : undefined
-      let vioStatus = _.includes(this.arrayStatus, status) ? _.indexOf(this.arrayStatus, status) + 1 : undefined
+      let vioStatus
+      if (status === 'all') {
+        vioStatus = undefined
+      } else {
+        vioStatus = _.includes(this.arrayStatus, status) ? _.indexOf(this.arrayStatus, status) + 1 : undefined
+      }
 
       let plateConverArray = _.split(plate, ',', -1)
 
@@ -225,13 +230,20 @@ export class Violation {
    */
   editViolation = async (id, status, object, plate, owner, phone, email) => {
     try {
+      // let dataChange = {}
+      // if (status) dataChange.status = _.includes(this.arrayStatus, status) ? _.indexOf(this.arrayStatus, status) + 1 : undefined
+      // if (object) dataChange.object = _.includes(this.arrayObject, object) ? _.indexOf(this.arrayObject, object) : undefined
+      // if (plate) dataChange.plate = plate
+      // if (owner) dataChange.owner = owner
+      // if (phone) dataChange.phone = phone
+      // if (email) dataChange.email = email
       let dataChange = {}
-      if (status) dataChange.status = _.includes(this.arrayStatus, status) ? _.indexOf(this.arrayStatus, status) + 1 : undefined
-      if (object) dataChange.object = _.includes(this.arrayObject, object) ? _.indexOf(this.arrayObject, object) : undefined
-      if (plate) dataChange.plate = plate
-      if (owner) dataChange.owner = owner
-      if (phone) dataChange.phone = phone
-      if (email) dataChange.email = email
+      dataChange.plate = plate
+      dataChange.owner = owner
+      dataChange.phone = phone
+      dataChange.email = email
+      dataChange.status = _.includes(this.arrayStatus, status) ? _.indexOf(this.arrayStatus, status) + 1 : undefined
+      dataChange.object = _.includes(this.arrayStatus, status) ? _.indexOf(this.arrayStatus, status) + 1 : undefined
 
       let [err, result] = await to(model.violation.editViolation(id, dataChange))
       if (err) throw err
@@ -311,10 +323,10 @@ export class Violation {
       doc.fontSize(13)
       doc
         .font('bold')
-        .text('THANH TRA SỞ', 90, doc.y, { align: 'left', continued: true })
-        .underline(115, doc.y + 15, 45, 2)
+        .text('THANH TRA SỞ', 110, doc.y, { align: 'left', continued: true })
+        .underline(135, doc.y + 15, 45, 2)
 
-      doc.font('bold').text('Độc lập - Tự do - Hạnh phúc', 40, doc.y, { align: 'right' }).underline(315, doc.y, 155, 2)
+      doc.font('bold').text('Độc lập - Tự do - Hạnh phúc', 57, doc.y, { align: 'right' }).underline(325, doc.y, 155, 2)
 
       doc.fontSize(11)
       doc.moveDown(0.3)
@@ -325,7 +337,7 @@ export class Violation {
 
       doc.moveDown(0.3)
       doc.fontSize(18)
-      doc.font('bold').text('THÔNG BÁO', 258, doc.y)
+      doc.font('bold').text('THÔNG BÁO', 241, doc.y)
 
       doc.moveDown(0.3)
       doc
@@ -342,17 +354,17 @@ export class Violation {
         .text('Yêu cầu chủ phương tiện (lái xe) đến Thanh tra Sở Giao Thông vận tải thành phố Đà Nẵng để giải quyết vi phạm theo quy định.')
         .moveDown(0.2)
         .text(
-          'Vào lúc:    ' + sovlingHour
-            ? sovlingHour
-            : '' + '   giờ   ' + sovlingMinute
-            ? sovlingMinute
-            : '' + '   phút' + ',   ngày   ' + sovlingDay
-            ? sovlingDay
-            : '' + '   tháng   ' + sovlingMonth
-            ? sovlingMonth
-            : '' + '   năm   ' + sovlingYear
-            ? sovlingYear
-            : ''
+          'Vào lúc:    ' +
+            sovlingHour +
+            '   giờ   ' +
+            sovlingMinute +
+            '   phút' +
+            ',   ngày   ' +
+            sovlingDay +
+            '   tháng   ' +
+            sovlingMonth +
+            '   năm   ' +
+            sovlingYear
         )
         .moveDown(0.2)
         .text('Địa điểm:  ...........................................................................')
