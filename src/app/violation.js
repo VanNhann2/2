@@ -21,7 +21,6 @@ export class Violation {
 
     // const protoFile = path.join(__dirname, config.protoFile);
     // this.#grpcClient = new GRpcClient('10.49.46.251:50052', config.protoFile, 'parking.Camera')
-    // this.#grpcClient = new GRpcClient('10.49.46.23:50055', config.protoFile, 'parking.Video')
   }
 
   /**
@@ -180,10 +179,6 @@ export class Violation {
 
       // let [err, getByIdCam] = await to(this.#grpcClient.makeRequest('get', { ids: { c1: result.camera } }))
       // if (err) throw err
-
-      // let [err, getVideoByDate] = await to(this.#grpcClient.makeRequest1('get', { time: { c1: result.vioTime } }))
-      // if (err) throw err
-      // const dataResult = { ...result, ...getVideoByDate }
 
       return result
     } catch (error) {
