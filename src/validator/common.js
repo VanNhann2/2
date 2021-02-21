@@ -31,6 +31,11 @@ export const isValidVehicleType = (object) => {
   return true
 }
 
+export const defineVehicleType = (object) => {
+  let defineVehicleType = { 0: 'Mô tô', 1: 'Ô tô khách trên 16 chỗ', 2: 'Ô tô con', 3: 'Ô tô khách 16 chỗ', 4: 'Ô tô tải' }
+  return defineVehicleType[object]
+}
+
 export const isValidTimelineType = (timeline) => {
   let arrayTimeline = ['day', 'week', 'month', 'year']
   return _.includes(arrayTimeline, timeline)
@@ -41,12 +46,12 @@ export const defineTimeline = (timeline) => {
   return arrTimelineDefine[timeline]
 }
 
-export const inStatusStatistical = (status) => {
-  if (status) {
-    let arrayStatus = ['synthetic', 'finishPenal', 'finishReport']
-    return _.includes(arrayStatus, status)
-  }
-}
+// export const inStatusStatistical = (status) => {
+//   if (status) {
+//     let arrayStatus = ['synthetic', 'finishPenal', 'finishReport']
+//     return _.includes(arrayStatus, status)
+//   }
+// }
 
 export const isValidStatusType = (status) => {
   if (status) {
@@ -54,6 +59,11 @@ export const isValidStatusType = (status) => {
     return _.includes(arrayStatus, status)
   }
   return true
+}
+
+export const defineStatusType = (status) => {
+  let defineStatusType = { 0: '', 1: 'Chưa duyệt', 2: 'Đã duyệt', 3: 'Đã xuất biên bản', 4: 'Đã hoàn thành xử phạt', 5: 'Quá hạn' }
+  return defineStatusType[status]
 }
 
 export const verifyEmail = (email) => {
@@ -66,16 +76,6 @@ export const verifyPhone = (phone) => {
   var reg = /^[\+]?[(]?[0-9]{3}[)]?[-\s\.]?[0-9]{3}[-\s\.]?[0-9]{4,6}$/im
 
   return reg.test(phone)
-}
-
-export const defineObject = (object) => {
-  let defineObject = { 0: 'Mô tô', 1: 'Ô tô khách trên 16 chỗ', 2: 'Ô tô con', 3: 'Ô tô khách 16 chỗ', 4: 'Ô tô tải' }
-  return defineObject[object]
-}
-
-export const defineStatus = (status) => {
-  let defineStatus = { 0: '', 1: 'Chưa duyệt', 2: 'Đã duyệt', 3: 'Đã xuất biên bản', 4: 'Đã hoàn thành xử phạt', 5: 'Quá hạn' }
-  return defineStatus[status]
 }
 
 export const verifyPlate = (plate) => {

@@ -108,7 +108,7 @@ export class Violation {
             let dataDetail = {
               id: item.id,
               violationType: item.action === 3 ? 'Đỗ xe sai quy định' : 'Chưa có hành động',
-              vehicleType: validator.defineObject(item.object),
+              vehicleType: validator.defineVehicleType(item.object),
               numberPlate: item.plate,
               images: replaceImage(item.images, platform),
               thumbnail: replaceImage(item.objectImages, platform) ? replaceImage(item.objectImages, platform)[0] : null,
@@ -243,8 +243,7 @@ export class Violation {
       dataChange.phone = phone
       dataChange.email = email
       dataChange.status = _.includes(this.arrayStatus, status) ? _.indexOf(this.arrayStatus, status) + 1 : undefined
-      dataChange.object = _.includes(this.arrayStatus, status) ? _.indexOf(this.arrayStatus, status) + 1 : undefined
-
+      dataChange.object = _.includes(this.arrayObject, object) ? _.indexOf(this.arrayObject, object) : undefined
       let [err, result] = await to(model.violation.editViolation(id, dataChange))
       if (err) throw err
 

@@ -177,8 +177,8 @@ export class ViolationModel extends BaseModel {
           let dataDetail = {
             id: item.id,
             violationType: item.action === 3 ? 'Đỗ xe sai quy định' : 'Chưa có hành động',
-            vehicleType: validator.defineObject(item.object),
-            status: validator.defineStatus(item.status),
+            vehicleType: validator.defineVehicleType(item.object),
+            status: validator.defineStatusType(item.status),
             numberPlate: item.plate,
             camera: { id: item.camera },
             images: replaceImage(item.images, platform),
@@ -240,7 +240,6 @@ export class ViolationModel extends BaseModel {
     )
     if (err) throw err
 
-    console.log({ result })
     let dataResutl = []
     if (!_.isEmpty(result)) {
       let data = {
@@ -260,7 +259,6 @@ export class ViolationModel extends BaseModel {
       }
       dataResutl = data
     }
-    console.log({ dataResutl })
     return dataResutl ? dataResutl : {}
   }
 
