@@ -21,7 +21,7 @@ export class ViolationModel extends BaseModel {
    * @param {String} vioPlate
    * @param {Date} startSearchDate
    * @param {Date} endSearchDate
-   * @param {Number} page
+   * @param {Number || String} page
    * @param {'web'|'mobile'} platform
    * @param {Boolean} plateOnly
    */
@@ -36,7 +36,7 @@ export class ViolationModel extends BaseModel {
 
     let statusCondition
     const objectCondition = _.isEmpty(_.toString(vioObject)) ? {} : { $or: [{ object: vioObject }] }
-    if (platform) {
+    if (platform !== 'admin') {
       statusCondition = { $or: [{ status: 2 }] }
     } else {
       statusCondition = _.isEmpty(_.toString(vioStatus)) ? {} : { $or: [{ status: vioStatus }] }
@@ -48,8 +48,10 @@ export class ViolationModel extends BaseModel {
     if (plateOnly === true) {
       plateOnlyCondition = { $or: [{ plate: { $ne: '-' } }] }
     }
+
     const searchDateCondition =
       _.isEmpty(startSearchDate) && _.isEmpty(endSearchDate) ? {} : { $or: [{ vio_time: { $gte: new Date(startSearchDate), $lte: new Date(endSearchDate) } }] }
+
     const otherCondition = { deleted: { $ne: true } }
     const match = {
       $match: { $and: [idsCameraCondition, objectCondition, statusCondition, plateCondition, searchDateCondition, otherCondition, plateOnlyCondition] },
@@ -75,9 +77,7 @@ export class ViolationModel extends BaseModel {
         phone: 1,
       },
     }
-    // const addField = { $addFields: { id: '$_id' } }
-    //const conditionsData = [match, project, { $addFields: { id: '$_id' } }, { $sort: { vio_time: -1 } }, { $skip: perPage * (page - 1) }, { $limit: perPage }]
-    //const conditionsCount = [match, project, { $addFields: { id: '$_id' } }]
+
     const conditionsData = [
       match,
       project,
@@ -114,14 +114,13 @@ export class ViolationModel extends BaseModel {
   /**
    *
    * @param {mongoose.Types.ObjectId} id
-   * @param {'web'|'mobile'} platform
+   * @param {'mobile'|'web'} platform
    */
   getById = async (id, platform) => {
     const otherCondition = { deleted: { $ne: true } }
     const idCondition = { _id: mongoose.Types.ObjectId(id) }
     const match = {
-      // $match: { _id: mongoose.Types.ObjectId(id), deleted: { $ne: true } },
-      // {age: { $ne: 12} =>>>>>>>>>>>>>>> WHERE age != 12
+
       $match: { $and: [otherCondition, idCondition] },
     }
 
@@ -149,7 +148,9 @@ export class ViolationModel extends BaseModel {
     if (err) throw err
 
     let dataWeb = []
-    if (!_.isEmpty(result)) {
+    if (platform === 'web') {
+      if (_.isEmpty(result)) return dataWeb = []
+
       _.forEach(result, function (item) {
         let data = {
           id: item.id,
@@ -171,31 +172,31 @@ export class ViolationModel extends BaseModel {
     }
 
     let dataMobile = []
-    if (platform) {
-      if (!_.isEmpty(result)) {
-        _.forEach(result, function (item) {
-          let dataDetail = {
-            id: item.id,
-            violationType: item.action === 3 ? 'Đỗ xe sai quy định' : 'Chưa có hành động',
-            vehicleType: validator.defineVehicleType(item.object),
-            status: validator.defineStatusType(item.status),
-            numberPlate: item.plate,
-            camera: { id: item.camera },
-            images: replaceImage(item.images, platform),
-            objectImages: replaceImage(item.objectImages, platform),
-            plateImages: replaceImage(item.plateImages, platform),
-            thumbnail: replaceImage(item.objectImages, platform)[0] ? replaceImage(item.objectImages, platform)[0] : null,
-            vioTime: item.vioTime,
-            email: item.email,
-            owner: item.owner,
-            phone: item.phone,
-          }
-          dataMobile.push(dataDetail)
-        })
-      }
+    if (platform === 'mobile') {
+      if (_.isEmpty(result)) return dataMobile = []
+
+      _.forEach(result, function (item) {
+        let dataDetail = {
+          id: item.id,
+          violationType: item.action === 3 ? 'Đỗ xe sai quy định' : 'Chưa có hành động',
+          vehicleType: validator.defineVehicleType(item.object),
+          status: validator.defineStatusType(item.status),
+          numberPlate: item.plate,
+          camera: { id: item.camera },
+          images: replaceImage(item.images, platform),
+          objectImages: replaceImage(item.objectImages, platform),
+          plateImages: replaceImage(item.plateImages, platform),
+          thumbnail: replaceImage(item.objectImages, platform)[0] ? replaceImage(item.objectImages, platform)[0] : null,
+          vioTime: item.vioTime,
+          email: item.email,
+          owner: item.owner,
+          phone: item.phone,
+        }
+        dataMobile.push(dataDetail)
+      })
     }
 
-    return platform ? dataMobile[0] : dataWeb[0] ? dataWeb[0] : {}
+    return platform === 'mobile' ? dataMobile[0] : platform === 'web' ? dataWeb[0] : {}
   }
 
   /**
@@ -213,7 +214,6 @@ export class ViolationModel extends BaseModel {
         },
         {
           $set: {
-            // status: action === 'unapproved' ? 1 : action === 'approved' ? 2 : action === 'finishReport' ? 3 : 4,
             status: action === 'unapproved' ? 1 : action === 'approved' ? 2 : action === 'finishReport' ? 3 : action === 'finishPenal' ? 4 : 5,
           },
         }
@@ -299,7 +299,6 @@ export class ViolationModel extends BaseModel {
       let dateSubtract = moment(dateSearch).subtract(i, 'days').format('YYYY-MM-DD')
       arrDate.push(dateSubtract)
     }
-    // console.log(arrDate)
 
     let arrWeek = []
     for (let i = 0; i < 130; i++) {
@@ -307,8 +306,7 @@ export class ViolationModel extends BaseModel {
       let date = moment(dateSubtract, 'YYYYMMDD').isoWeek()
       arrWeek.push(date)
     }
-    // let arrWeek1
-    // let arrWeek2
+
     let arrWeek1 = arrWeek.slice(0, _.indexOf(arrWeek, 1) + 1)
     let dataArrWeek1 = arrWeek.slice(_.indexOf(arrWeek, 1) + 1)
 
@@ -352,8 +350,6 @@ export class ViolationModel extends BaseModel {
       dataWeek4.push(arr)
     })
     let dataWeek = [...dataWeek1, ...dataWeek2, ...dataWeek3, ...dataWeek4]
-    // console.log({ dataWeek })
-    // console.log({ dataWeek2 })
 
     let arrMonth = []
     for (let i = 0; i < 40; i++) {
@@ -393,7 +389,13 @@ export class ViolationModel extends BaseModel {
           match,
           {
             $group: {
-              _id: { $dateToString: { format: '%Y-%m-%d', date: '$vio_time' } },
+              _id: {
+                $dateToString: {
+                  format: '%Y-%m-%d',
+                  date: '$vio_time',
+                  timezone: 'Asia/Ho_Chi_Minh'
+                }
+              },
               status1: {
                 $sum: { $cond: [{ $eq: ['$status', 1] }, 1, 0] },
               },
@@ -473,7 +475,6 @@ export class ViolationModel extends BaseModel {
         }
       }
     } else if (timeline === 'week') {
-      // let arrDate = []
       let [errWeek, timelineWeek] = await to(
         this.model.aggregate([
           match,
@@ -569,7 +570,6 @@ export class ViolationModel extends BaseModel {
           totalPage: 1,
         }
       }
-      // arrDate.push([...timelineWeek])
     } else if (timeline === 'month') {
       let [errMonth, timelineMonth] = await to(
         this.model.aggregate([

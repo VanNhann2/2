@@ -17,10 +17,6 @@ export class GRpcClient {
    */
   constructor(serverAddress, protoPath, serviceName) {
     this.#proto = this.#loadProto(protoPath)
-    // console.log('dadasd')
-    // console.log(this.#proto)
-    // console.log(serviceName)
-    // console.log(_.get(this.#proto, serviceName))
     this.#client = new (_.get(this.#proto, serviceName))(serverAddress, grpc.credentials.createInsecure())
   }
 
@@ -51,15 +47,6 @@ export class GRpcClient {
       })
     })
   }
-
-  // makeRequest1 = async (method, requestData) => {
-  //   return new Promise((resolve, reject) => {
-  //     this.#client[method](requestData, (err, response) => {
-  //       if (err) reject(err)
-  //       resolve(response)
-  //     })
-  //   })
-  // }
 
   /**
    * Load protocol buffer

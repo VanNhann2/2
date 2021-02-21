@@ -18,8 +18,6 @@ export class Violation {
   // #grpcClient = undefined
 
   constructor() {
-    this.arrayObject = ['bike', 'bus', 'car', 'miniBus', 'truck']
-    this.arrayStatus = ['unapproved', 'approved', 'finishReport', 'finishPenal', 'expired']
 
     // const protoFile = path.join(__dirname, config.protoFile);
     // this.#grpcClient = new GRpcClient('10.49.46.251:50052', config.protoFile, 'parking.Camera')
@@ -34,26 +32,33 @@ export class Violation {
    * @param {String} plate
    * @param {Date} startDate
    * @param {Date} endDate
-   * @param {String} page
-   * @param {'web'|'mobile'} platform
+   * @param {String || Number} page
+   * @param {'web'|'mobile'|'admin'} platform
    * @param {Boolean} plateOnly
    */
   /** Get all violations */
   getAll = async (idsCamera, object, status, plate, startDate, endDate, page, platform, plateOnly) => {
     try {
-      let vioObject = _.includes(this.arrayObject, object) ? _.indexOf(this.arrayObject, object) : undefined
+      let vioObject
+      if (object === 'all') {
+        vioObject = undefined
+      } else {
+        vioObject = _.includes(validator.vehicleTypes, object) ? _.indexOf(validator.vehicleTypes, object) - 1 : undefined
+      }
+
       let vioStatus
       if (status === 'all') {
         vioStatus = undefined
       } else {
-        vioStatus = _.includes(this.arrayStatus, status) ? _.indexOf(this.arrayStatus, status) + 1 : undefined
+        vioStatus = _.includes(validator.statusTypes, status) ? _.indexOf(validator.statusTypes, status) : undefined
       }
 
       let plateConverArray = _.split(plate, ',', -1)
 
       const vioPlate = plate ? plateConverArray : undefined
-      const startSearchDate = startDate && startDate != '' && startDate != 'null' ? new Date(startDate).toISOString() : undefined
-      const endSearchDate = endDate && endDate != '' && endDate != 'null' ? new Date(endDate).toISOString() : undefined
+      const startSearchDate = startDate && startDate != '' && startDate != 'null' ? startDate : undefined
+      const endSearchDate = endDate && endDate != '' && endDate != 'null' ? endDate : undefined
+
       let [err, conditions] = await to(
         model.violation.conditions(idsCamera, vioObject, vioStatus, vioPlate, startSearchDate, endSearchDate, page, platform, plateOnly)
       )
@@ -118,7 +123,7 @@ export class Violation {
           })
         }
       } else {
-        // data trang admin//
+        // data page admin//
         if (!_.isEmpty(dataResult)) {
           _.forEach(dataResult, function (item) {
             let dataFor = {
@@ -147,16 +152,16 @@ export class Violation {
       page = _.toNumber(page)
       return platform === 'mobile'
         ? {
-            data,
-            page,
-            perPage,
-            total,
-          }
+          data,
+          page,
+          perPage,
+          total,
+        }
         : {
-            pageData,
-            totalRecord,
-            totalPage,
-          }
+          pageData,
+          totalRecord,
+          totalPage,
+        }
     } catch (error) {
       logger.error('Violations.getAll() error:', error)
       throw new AppError({ code: StatusCodes.INTERNAL_SERVER_ERROR, message: 'Lấy danh sách vi phạm thất bại' })
@@ -166,23 +171,18 @@ export class Violation {
   /**
    *
    * @param {mongoose.Types.ObjectId} id
-   * @param {'mobile'} platform
+   * @param {'mobile'|'web'} platform
    */
   getById = async (id, platform) => {
     try {
       let [errGet, result] = await to(model.violation.getById(id, platform))
       if (errGet) throw errGet
 
-      // console.log(id)
       // let [err, getByIdCam] = await to(this.#grpcClient.makeRequest('get', { ids: { c1: result.camera } }))
       // if (err) throw err
 
-      // console.log(result)
-
       // let [err, getVideoByDate] = await to(this.#grpcClient.makeRequest1('get', { time: { c1: result.vioTime } }))
       // if (err) throw err
-
-      // console.log(getVideoByDate)
       // const dataResult = { ...result, ...getVideoByDate }
 
       return result
@@ -193,57 +193,24 @@ export class Violation {
   }
 
   /**
-   * Update approval status
-   * @param {string[]} ids
-   * @param {('approved'|'unapproved'|'finishReport'|'finishPenal'|'expired')} action
-   */
-  updateApproval = async (ids, action) => {
-    try {
-      if (!validator.isValidStatusType(action)) {
-        throw new AppError('invalid action')
-      }
-      console.log(ids, action)
-      let [err, results] = await to(model.violation.updatedStatus(ids, action))
-      if (err) throw err
-
-      return action === 'approved'
-        ? 'Duyệt vi phạm thành công'
-        : action === 'finishPenal'
-        ? 'Hoàn thành xử phạt'
-        : action === 'finishReport'
-        ? 'Đã xuất biên bản'
-        : 'Bỏ duyệt vi phạm thành công'
-    } catch (error) {
-      logger.error('Violations.updateApproval() error:', error)
-      throw new AppError({ code: StatusCodes.INTERNAL_SERVER_ERROR, message: 'Thay đổi trạng thái duyệt vi phạm thất bại' })
-    }
-  }
-
-  /**
    *
    * @param {mongoose.Types.ObjectId} id
-   * @param {Number} object
+   * @param {String} status
+   * @param {String} object
    * @param {String} plate
    * @param {String} owner
-   * @param {Number} phone
+   * @param {String} phone
    * @param {String} email
    */
   editViolation = async (id, status, object, plate, owner, phone, email) => {
     try {
-      // let dataChange = {}
-      // if (status) dataChange.status = _.includes(this.arrayStatus, status) ? _.indexOf(this.arrayStatus, status) + 1 : undefined
-      // if (object) dataChange.object = _.includes(this.arrayObject, object) ? _.indexOf(this.arrayObject, object) : undefined
-      // if (plate) dataChange.plate = plate
-      // if (owner) dataChange.owner = owner
-      // if (phone) dataChange.phone = phone
-      // if (email) dataChange.email = email
       let dataChange = {}
       dataChange.plate = plate
       dataChange.owner = owner
       dataChange.phone = phone
       dataChange.email = email
-      dataChange.status = _.includes(this.arrayStatus, status) ? _.indexOf(this.arrayStatus, status) + 1 : undefined
-      dataChange.object = _.includes(this.arrayObject, object) ? _.indexOf(this.arrayObject, object) : undefined
+      dataChange.status = _.includes(validator.statusTypes, status) ? _.indexOf(validator.statusTypes, status) : undefined
+      dataChange.object = _.includes(validator.vehicleTypes, object) ? _.indexOf(validator.vehicleTypes, object) - 1 : undefined
       let [err, result] = await to(model.violation.editViolation(id, dataChange))
       if (err) throw err
 
@@ -261,9 +228,9 @@ export class Violation {
    * @param {String} vioOwner
    * @param {String} addressOwner
    * @param {Response} res
-   * @param {Date} sovlingDate
+   * @param {Date} solvingDate
    */
-  report = async (id, vioAddress, vioOwner, addressOwner, res, sovlingDate) => {
+  report = async (id, vioAddress, vioOwner, addressOwner, res, solvingDate) => {
     try {
       const ownerReport = vioOwner ? vioOwner : ''
       const addressOwnerReport = addressOwner ? addressOwner : ''
@@ -272,7 +239,7 @@ export class Violation {
       let [err, violation] = await to(model.violation.getById(id))
       if (err) throw err
 
-      let vioObject = _.indexOf(this.arrayObject, violation.object)
+      let vioObject = _.indexOf(validator.vehicleTypes, violation.object) - 1
 
       const date = new Date(violation.vioTime)
       const getHour = date.getHours()
@@ -283,12 +250,12 @@ export class Violation {
       const vioMonth = date.getMonth() + 1
       const vioYear = date.getFullYear()
 
-      const sovlingDateReport = new Date(sovlingDate)
-      const sovlingHour = ('0' + sovlingDateReport.getHours()).slice(-2)
-      const sovlingMinute = ('0' + sovlingDateReport.getMinutes()).slice(-2)
-      const sovlingDay = sovlingDateReport.getDate()
-      const sovlingMonth = sovlingDateReport.getMonth() + 1
-      const sovlingYear = sovlingDateReport.getFullYear()
+      const solvingDateReport = new Date(solvingDate)
+      const solvingHour = ('0' + solvingDateReport.getHours()).slice(-2)
+      const solvingMinute = ('0' + solvingDateReport.getMinutes()).slice(-2)
+      const solvingDay = solvingDateReport.getDate()
+      const solvingMonth = solvingDateReport.getMonth() + 1
+      const solvingYear = solvingDateReport.getFullYear()
 
       const doc = new PDFDocument({
         size: 'A5',
@@ -301,8 +268,7 @@ export class Violation {
           right: 60,
         },
       })
-      // doc.polygon([100, 0], [50, 100], [150, 200], [200, 100]);
-      // doc.stroke();
+
       doc.lineWidth(3)
       doc.lineJoin('miter').rect(35, 40, 520, 340).stroke()
 
@@ -354,16 +320,16 @@ export class Violation {
         .moveDown(0.2)
         .text(
           'Vào lúc:    ' +
-            sovlingHour +
-            '   giờ   ' +
-            sovlingMinute +
-            '   phút' +
-            ',   ngày   ' +
-            sovlingDay +
-            '   tháng   ' +
-            sovlingMonth +
-            '   năm   ' +
-            sovlingYear
+          solvingHour +
+          '   giờ   ' +
+          solvingMinute +
+          '   phút' +
+          ',   ngày   ' +
+          solvingDay +
+          '   tháng   ' +
+          solvingMonth +
+          '   năm   ' +
+          solvingYear
         )
         .moveDown(0.2)
         .text('Địa điểm:  ...........................................................................')
@@ -388,22 +354,10 @@ export class Violation {
 
   /**
    * Delete violations
-   * @param {string|mongoose.Types.ObjectId}
+   * @param {string|mongoose.Types.ObjectId} ids
    */
   delete = async (ids) => {
-    //////// session dung de xoa CA 2 table khac nhau neu ben table A get thuoc tinh table B
-    // let session = undefined
     try {
-      // let [errSession, newSession] = await to(mongoose.startSession())
-      // if (errSession) throw errSession
-      // session = newSession
-      // session.startTransaction()
-
-      // let [errDelete] = await to(model.violation.delete(ids, session))
-      // if (errDelete) throw errDelete
-
-      // session.endSession()
-      //validate object ids
       let [errDelete] = await to(model.violation.delete(ids))
       if (errDelete) throw errDelete
 
@@ -418,13 +372,12 @@ export class Violation {
    *
    * @param {Date} day
    * @param {'day'|'week'|'month'|'year'} timeline
-   * @param {Number} page
+   * @param {Number || String} page
    * @param {String} idCam
    */
   getStatistical = async (day, timeline, page, idCam) => {
     try {
       let dateSearch = new Date(day)
-      console.log({ dateSearch })
       let [err, result] = await to(model.violation.getStatistical(dateSearch, timeline, page, idCam))
       if (err) throw err
 
@@ -439,18 +392,14 @@ export class Violation {
    *
    * @param {Date} day
    * @param {'day'|'week'|'month'|'year'} timeline
-   * @param {Number} page
+   * @param {Number || String} page
    * @param {Mongoose.Types.ObjectId(string)} idCam
    * @param {String} nameCam
-   * @param {*} res
+   * @param {Response} res
    */
   reportStatisticalExcel = async (day, timeline, page, idCam, nameCam) => {
     try {
-      console.log({ timeline })
-      console.log({ page })
-
       let dateSearch = new Date(day)
-      console.log({ dateSearch })
 
       let workbook = new ExcelJs.Workbook()
       let worksheet = workbook.addWorksheet('Báo cáo thống kê vi phạm')
