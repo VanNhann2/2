@@ -26,18 +26,17 @@ export class ViolationModel extends BaseModel {
    * @param {Boolean} plateOnly
    */
   conditions = async (idsCamera, vioObject, vioStatus, vioPlate, startSearchDate, endSearchDate, page, platform, plateOnly) => {
-    const arrIds = []
+    let arrIds = []
     if (!_.isEmpty(idsCamera)) {
       for (let id of idsCamera) {
         arrIds.push(mongoose.Types.ObjectId(id))
       }
     }
-    let idsCameraCondition = _.isEmpty(idsCamera) ? {} : { $or: [{ camera: { $in: arrIds } }] }
-
-    let statusCondition
+    const idsCameraCondition = _.isEmpty(idsCamera) ? {} : { $or: [{ camera: { $in: arrIds } }] }
     const objectCondition = _.isEmpty(_.toString(vioObject)) ? {} : { $or: [{ object: vioObject }] }
+    let statusCondition
     if (platform !== 'admin') {
-      statusCondition = { $or: [{ status: 2 }] }
+      statusCondition = { $or: [{ status: { $ne: 1 } }] }
     } else {
       statusCondition = _.isEmpty(_.toString(vioStatus)) ? {} : { $or: [{ status: vioStatus }] }
     }
@@ -108,6 +107,7 @@ export class ViolationModel extends BaseModel {
   getCount = async (conditions) => {
     let [err, result] = await to(this.model.aggregate([...conditions, { $count: 'myCount' }]))
     if (err) throw err
+
     return result
   }
 
@@ -120,7 +120,6 @@ export class ViolationModel extends BaseModel {
     const otherCondition = { deleted: { $ne: true } }
     const idCondition = { _id: mongoose.Types.ObjectId(id) }
     const match = {
-
       $match: { $and: [otherCondition, idCondition] },
     }
 
@@ -147,143 +146,44 @@ export class ViolationModel extends BaseModel {
     let [err, result] = await to(this.model.aggregate([match, project]))
     if (err) throw err
 
-    let dataWeb = []
-    if (platform === 'web') {
-      if (_.isEmpty(result)) return dataWeb = []
+    if (_.isEmpty(result)) return {}
 
-      _.forEach(result, function (item) {
-        let data = {
-          id: item.id,
-          action: item.action,
-          object: item.object,
-          status: item.status,
-          plate: item.plate,
-          camera: item.camera,
-          images: replaceImage(item.images, platform),
-          objectImages: replaceImage(item.objectImages, platform),
-          plateImages: replaceImage(item.plateImages, platform),
-          vioTime: item.vioTime,
-          email: item.email,
-          owner: item.owner,
-          phone: item.phone,
-        }
-        dataWeb.push(data)
-      })
-    }
+    let data = result[0]
 
-    let dataMobile = []
+    let dataDetail = {}
     if (platform === 'mobile') {
-      if (_.isEmpty(result)) return dataMobile = []
-
-      _.forEach(result, function (item) {
-        let dataDetail = {
-          id: item.id,
-          violationType: item.action === 3 ? 'Đỗ xe sai quy định' : 'Chưa có hành động',
-          vehicleType: validator.defineVehicleType(item.object),
-          status: validator.defineStatusType(item.status),
-          numberPlate: item.plate,
-          camera: { id: item.camera },
-          images: replaceImage(item.images, platform),
-          objectImages: replaceImage(item.objectImages, platform),
-          plateImages: replaceImage(item.plateImages, platform),
-          thumbnail: replaceImage(item.objectImages, platform)[0] ? replaceImage(item.objectImages, platform)[0] : null,
-          vioTime: item.vioTime,
-          email: item.email,
-          owner: item.owner,
-          phone: item.phone,
-        }
-        dataMobile.push(dataDetail)
-      })
-    }
-
-    return platform === 'mobile' ? dataMobile[0] : platform === 'web' ? dataWeb[0] : {}
-  }
-
-  /**
-   * Update approval status
-   * @param {String[]} ids
-   * @param {('unapproved'|'approved'|'finishReport'|'finishPenal'|'expired')} action
-   */
-  updatedStatus = async (ids, action) => {
-    let [err, result] = await to(
-      this.model.updateMany(
-        {
-          _id: {
-            $in: ids,
-          },
-        },
-        {
-          $set: {
-            status: action === 'unapproved' ? 1 : action === 'approved' ? 2 : action === 'finishReport' ? 3 : action === 'finishPenal' ? 4 : 5,
-          },
-        }
-      )
-    )
-    if (err) throw err
-    return result
-  }
-
-  /**
-   *
-   * @param {ObjectId} id
-   * @param {{}} dataChange
-   */
-  editViolation = async (id, dataChange) => {
-    let [err, result] = await to(
-      this.model.findByIdAndUpdate(
-        id,
-        {
-          $set: dataChange,
-        },
-        { new: true }
-      )
-    )
-    if (err) throw err
-
-    let dataResutl = []
-    if (!_.isEmpty(result)) {
-      let data = {
-        id: result._id,
-        action: result.action,
-        object: result.object,
-        status: result.status,
-        plate: result.plate,
-        camera: result.camera,
-        images: replaceImage(result.images),
-        objectImages: replaceImage(result.object_images),
-        plateImages: replaceImage(result.plate_images),
-        vioTime: result.vio_time,
-        email: result.email,
-        owner: result.owner,
-        phone: result.phone,
+      dataDetail = {
+        id: data.id,
+        violationType: data.action === 3 ? 'Đỗ xe sai quy định' : 'Chưa có hành động',
+        vehicleType: validator.defineVehicleType(data.object),
+        status: validator.defineStatusType(data.status),
+        numberPlate: data.plate,
+        camera: { id: data.camera },
+        images: replaceImage(data.images, platform),
+        objectImages: replaceImage(data.objectImages, platform),
+        plateImages: replaceImage(data.plateImages, platform),
+        thumbnail: replaceImage(data.objectImages, platform)[0] ? replaceImage(data.objectImages, platform)[0] : null,
+        vioTime: data.vioTime,
+        email: data.email,
+        owner: data.owner,
+        phone: data.phone,
       }
-      dataResutl = data
+    } else {
+      dataDetail = {
+        id: data.id,
+        violationType: data.action === 3 ? 'Đỗ xe sai quy định' : 'Chưa có hành động',
+        vehicleType: validator.defineVehicleType(data.object),
+        status: validator.defineStatusType(data.status),
+        plate: data.plate,
+        camera: { id: data.camera },
+        vioTime: data.vioTime,
+        email: data.email,
+        owner: data.owner,
+        phone: data.phone,
+      }
     }
-    return dataResutl ? dataResutl : {}
-  }
 
-  /**
-   *
-   * @param {mongoose.Types.ObjectId} ids
-   */
-  delete = async (ids) => {
-    let [err, result] = await to(
-      this.model.updateMany(
-        {
-          _id: {
-            $in: ids,
-          },
-        },
-        {
-          $set: {
-            deleted: true,
-          },
-        }
-      )
-    )
-
-    if (err) throw err
-    return result
+    return dataDetail
   }
 
   /**
@@ -364,7 +264,7 @@ export class ViolationModel extends BaseModel {
     }
 
     const otherCondition = { deleted: { $ne: true } }
-    let idCamCondition = _.isEmpty(idCam) ? {} : { $or: [{ camera: mongoose.Types.ObjectId(idCam) }] }
+    const idCamCondition = _.isEmpty(idCam) ? {} : { $or: [{ camera: mongoose.Types.ObjectId(idCam) }] }
 
     const sortDateChose = _.isEmpty(_.toString(dateSearch)) ? {} : { $or: [{ vio_time: { $lte: new Date(dateSearch) } }] }
     const match = {
@@ -393,8 +293,8 @@ export class ViolationModel extends BaseModel {
                 $dateToString: {
                   format: '%Y-%m-%d',
                   date: '$vio_time',
-                  timezone: 'Asia/Ho_Chi_Minh'
-                }
+                  timezone: 'Asia/Ho_Chi_Minh',
+                },
               },
               status1: {
                 $sum: { $cond: [{ $eq: ['$status', 1] }, 1, 0] },
@@ -452,27 +352,28 @@ export class ViolationModel extends BaseModel {
       )
       if (errDay) throw errDay
       let arrData = []
-      if (!_.isEmpty(timelineDay)) {
-        _.forEach(timelineDay, function (item) {
-          let dataFor = {
-            unapproved: item.status1,
-            approved: item.status2,
-            finishReport: item.status3,
-            finishPenal: item.status4,
-            total: item.status1 + item.status2 + item.status3 + item.status4,
-            time: moment(item.time).format('DD/MM/YYYY'),
-          }
-          arrData.push(dataFor)
-        })
-        data = {
-          data: arrData || [],
-          totalPage: Math.ceil(arrDate.length / config.limitStatistical) || 1,
-        }
-      } else {
+
+      if (_.isEmpty(timelineDay)) {
         data = {
           data: [],
           totalPage: 1,
         }
+      }
+
+      _.forEach(timelineDay, function (item) {
+        let dataFor = {
+          unapproved: item.status1,
+          approved: item.status2,
+          finishReport: item.status3,
+          finishPenal: item.status4,
+          total: item.status1 + item.status2 + item.status3 + item.status4,
+          time: moment(item.time).format('DD/MM/YYYY'),
+        }
+        arrData.push(dataFor)
+      })
+      data = {
+        data: arrData || [],
+        totalPage: Math.ceil(arrDate.length / config.limitStatistical) || 1,
       }
     } else if (timeline === 'week') {
       let [errWeek, timelineWeek] = await to(
@@ -547,28 +448,28 @@ export class ViolationModel extends BaseModel {
         }
       }
 
-      if (!_.isEmpty(timelineWeek)) {
-        let arrData = []
-        _.forEach(timelineWeek, function (item) {
-          let dataFor = {
-            unapproved: item.status1,
-            approved: item.status2,
-            finishReport: item.status3,
-            finishPenal: item.status4,
-            total: item.status1 + item.status2 + item.status3 + item.status4,
-            time: handleTime(item.time),
-          }
-          arrData.push(dataFor)
-        })
-        data = {
-          data: arrData || [],
-          totalPage: Math.ceil(arrWeek.length / config.limitStatistical) || 1,
-        }
-      } else {
+      if (_.isEmpty(timelineWeek)) {
         data = {
           data: [],
           totalPage: 1,
         }
+      }
+
+      let arrData = []
+      _.forEach(timelineWeek, function (item) {
+        let dataFor = {
+          unapproved: item.status1,
+          approved: item.status2,
+          finishReport: item.status3,
+          finishPenal: item.status4,
+          total: item.status1 + item.status2 + item.status3 + item.status4,
+          time: handleTime(item.time),
+        }
+        arrData.push(dataFor)
+      })
+      data = {
+        data: arrData || [],
+        totalPage: Math.ceil(arrWeek.length / config.limitStatistical) || 1,
       }
     } else if (timeline === 'month') {
       let [errMonth, timelineMonth] = await to(
@@ -639,28 +540,28 @@ export class ViolationModel extends BaseModel {
         } else return moment(dateStart).clone().endOf('month').format('DD/MM/YYYY')
       }
 
-      if (!_.isEmpty(timelineMonth)) {
-        let arrData = []
-        _.forEach(timelineMonth, function (item) {
-          let dataFor = {
-            unapproved: item.status1,
-            approved: item.status2,
-            finishReport: item.status3,
-            finishPenal: item.status4,
-            total: item.status1 + item.status2 + item.status3 + item.status4,
-            time: `${addStartMonth(item.time)} - ${moment(item.time).clone().startOf('month').format('DD/MM/YYYY')}`,
-          }
-          arrData.push(dataFor)
-        })
-        data = {
-          data: arrData || [],
-          totalPage: Math.ceil(arrMonth.length / config.limitStatistical) || 1,
-        }
-      } else {
+      if (_.isEmpty(timelineMonth)) {
         data = {
           data: [],
           totalPage: 1,
         }
+      }
+
+      let arrData = []
+      _.forEach(timelineMonth, function (item) {
+        let dataFor = {
+          unapproved: item.status1,
+          approved: item.status2,
+          finishReport: item.status3,
+          finishPenal: item.status4,
+          total: item.status1 + item.status2 + item.status3 + item.status4,
+          time: `${addStartMonth(item.time)} - ${moment(item.time).clone().startOf('month').format('DD/MM/YYYY')}`,
+        }
+        arrData.push(dataFor)
+      })
+      data = {
+        data: arrData || [],
+        totalPage: Math.ceil(arrMonth.length / config.limitStatistical) || 1,
       }
     } else if (timeline === 'year') {
       let [errYear, timelineYear] = await to(
@@ -733,30 +634,119 @@ export class ViolationModel extends BaseModel {
       }
 
       if (!_.isEmpty(timelineYear)) {
-        let arrData = []
-        _.forEach(timelineYear, function (item) {
-          let dataFor = {
-            unapproved: item.status1,
-            approved: item.status2,
-            finishReport: item.status3,
-            finishPenal: item.status4,
-            total: item.status1 + item.status2 + item.status3 + item.status4,
-            time: `${addStartYear(item.time)} - ${moment(item.time).clone().startOf('year').format('DD/MM/YYYY')}`,
-          }
-          arrData.push(dataFor)
-        })
-        data = {
-          data: arrData || [],
-          totalPage: Math.ceil(arrYear.length / config.limitStatistical) || 1,
-        }
-      } else {
         data = {
           data: [],
           totalPage: 1,
         }
       }
+
+      let arrData = []
+      _.forEach(timelineYear, function (item) {
+        let dataFor = {
+          unapproved: item.status1,
+          approved: item.status2,
+          finishReport: item.status3,
+          finishPenal: item.status4,
+          total: item.status1 + item.status2 + item.status3 + item.status4,
+          time: `${addStartYear(item.time)} - ${moment(item.time).clone().startOf('year').format('DD/MM/YYYY')}`,
+        }
+        arrData.push(dataFor)
+      })
+      data = {
+        data: arrData || [],
+        totalPage: Math.ceil(arrYear.length / config.limitStatistical) || 1,
+      }
     }
 
     return data ? data : []
+  }
+
+  /**
+   *
+   * @param {ObjectId} id
+   * @param {{}} dataChange
+   */
+  editViolation = async (id, dataChange) => {
+    let [err, result] = await to(
+      this.model.findByIdAndUpdate(
+        id,
+        {
+          $set: dataChange,
+        },
+        { new: true }
+      )
+    )
+    if (err) throw err
+
+    let dataResutl = []
+    if (!_.isEmpty(result)) {
+      let data = {
+        id: result._id,
+        action: result.action,
+        object: result.object,
+        status: result.status,
+        plate: result.plate,
+        camera: result.camera,
+        images: replaceImage(result.images),
+        objectImages: replaceImage(result.object_images),
+        plateImages: replaceImage(result.plate_images),
+        vioTime: result.vio_time,
+        email: result.email,
+        owner: result.owner,
+        phone: result.phone,
+      }
+      dataResutl = data
+    }
+
+    return dataResutl ? dataResutl : {}
+  }
+
+  /**
+   * Update approval status
+   * @param {String[]} ids
+   * @param {('unapproved'|'approved'|'finishReport'|'finishPenal'|'expired')} action
+   */
+  updatedStatus = async (ids, action) => {
+    let [err, result] = await to(
+      this.model.updateMany(
+        {
+          _id: {
+            $in: ids,
+          },
+        },
+        {
+          $set: {
+            status: action === 'unapproved' ? 1 : action === 'approved' ? 2 : action === 'finishReport' ? 3 : action === 'finishPenal' ? 4 : 5,
+          },
+        }
+      )
+    )
+    if (err) throw err
+
+    return result
+  }
+
+  /**
+   *
+   * @param {mongoose.Types.ObjectId} ids
+   */
+  delete = async (ids) => {
+    let [err, result] = await to(
+      this.model.updateMany(
+        {
+          _id: {
+            $in: ids,
+          },
+        },
+        {
+          $set: {
+            deleted: true,
+          },
+        }
+      )
+    )
+    if (err) throw err
+
+    return result
   }
 }

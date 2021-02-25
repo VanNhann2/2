@@ -14,13 +14,11 @@ import ExcelJs from 'exceljs'
 import { replaceImage } from '../utils'
 
 export class Violation {
-  // /** @type {GRpcClient} */
-  // #grpcClient = undefined
+  /** @type {GRpcClient} */
+  #grpcClient = undefined
 
   constructor() {
-
-    // const protoFile = path.join(__dirname, config.protoFile);
-    // this.#grpcClient = new GRpcClient('10.49.46.251:50052', config.protoFile, 'parking.Camera')
+    this.#grpcClient = new GRpcClient(config.grpcAddress, config.protoFile, config.grpcServiceName)
   }
 
   /**
@@ -38,17 +36,13 @@ export class Violation {
   /** Get all violations */
   getAll = async (idsCamera, object, status, plate, startDate, endDate, page, platform, plateOnly) => {
     try {
-      let vioObject
-      if (object === 'all') {
-        vioObject = undefined
-      } else {
+      let vioObject = undefined
+      if (object !== 'all') {
         vioObject = _.includes(validator.vehicleTypes, object) ? _.indexOf(validator.vehicleTypes, object) - 1 : undefined
       }
 
-      let vioStatus
-      if (status === 'all') {
-        vioStatus = undefined
-      } else {
+      let vioStatus = undefined
+      if (status !== 'all') {
         vioStatus = _.includes(validator.statusTypes, status) ? _.indexOf(validator.statusTypes, status) : undefined
       }
 
@@ -77,90 +71,63 @@ export class Violation {
       const totalRecord = totalDt[0]?.myCount || 0
       const totalPage = Math.ceil(totalRecord / config.limitPerPage) || 0
 
-      let dataResult = pageDt ? pageDt : []
-
       let pageData = []
-      let data = []
-      if (platform === 'web') {
+      if (_.isEmpty(pageDt))
+        return {
+          pageData: [],
+          totalRecord: 0,
+          total: 0,
+        }
+
+      if (platform === 'web' || platform === 'admin') {
         // data web public
-        if (!_.isEmpty(dataResult)) {
-          _.forEach(dataResult, function (item) {
-            let dataFor = {
-              id: item.id,
-              action: item.action,
-              object: item.object,
-              status: item.status,
-              plate: item.plate,
-              camera: item.camera,
-              images: replaceImage(item.images, platform),
-              objectImages: replaceImage(item.objectImages, platform),
-              plateImages: replaceImage(item.plateImages, platform),
-              vioTime: item.vioTime,
-              alprTime: item.alprTime,
-              email: item.email,
-              owner: item.owner,
-              phone: item.phone,
-            }
-            pageData.push(dataFor)
-          })
-        }
+        _.forEach(pageDt, function (item) {
+          let dataFor = {
+            id: item.id,
+            action: item.action,
+            object: item.object,
+            status: item.status,
+            plate: item.plate,
+            camera: item.camera,
+            images: replaceImage(item.images, platform),
+            objectImages: replaceImage(item.objectImages, platform),
+            plateImages: replaceImage(item.plateImages, platform),
+            vioTime: item.vioTime,
+            alprTime: item.alprTime,
+            email: item.email,
+            owner: item.owner,
+            phone: item.phone,
+          }
+          pageData.push(dataFor)
+        })
       } else if (platform === 'mobile') {
-        // data mobile public  ---- Duong bat buoc phai tra ve data, perPage, total (mac dinh la pageData, totalRecord, totalPage)
-        let convertData = pageDt ? pageDt : []
-        if (!_.isEmpty(convertData)) {
-          _.forEach(convertData, function (item) {
-            let dataDetail = {
-              id: item.id,
-              violationType: item.action === 3 ? 'Đỗ xe sai quy định' : 'Chưa có hành động',
-              vehicleType: validator.defineVehicleType(item.object),
-              numberPlate: item.plate,
-              images: replaceImage(item.images, platform),
-              thumbnail: replaceImage(item.objectImages, platform) ? replaceImage(item.objectImages, platform)[0] : null,
-              vioTime: item.vioTime,
-            }
-            data.push(dataDetail)
-          })
-        }
-      } else {
-        // data page admin//
-        if (!_.isEmpty(dataResult)) {
-          _.forEach(dataResult, function (item) {
-            let dataFor = {
-              id: item.id,
-              action: item.action,
-              object: item.object,
-              status: item.status,
-              plate: item.plate,
-              camera: item.camera,
-              images: replaceImage(item.images, platform),
-              objectImages: replaceImage(item.objectImages, platform),
-              plateImages: replaceImage(item.plateImages, platform),
-              vioTime: item.vioTime,
-              alprTime: item.alprTime,
-              email: item.email,
-              owner: item.owner,
-              phone: item.phone,
-            }
-            pageData.push(dataFor)
-          })
-        }
+        // data mobile public
+        _.forEach(pageDt, function (item) {
+          let dataDetail = {
+            id: item.id,
+            violationType: item.action === 3 ? 'Đỗ xe sai quy định' : 'Chưa có hành động',
+            vehicleType: validator.defineVehicleType(item.object),
+            numberPlate: item.plate,
+            images: replaceImage(item.images, platform),
+            thumbnail: replaceImage(item.objectImages, platform) ? replaceImage(item.objectImages, platform)[0] : null,
+            vioTime: item.vioTime,
+          }
+          pageData.push(dataDetail)
+        })
       }
 
-      let perPage = totalPage
-      let total = totalRecord
-      page = _.toNumber(page)
       return platform === 'mobile'
         ? {
-          data,
-          page,
-          perPage,
-          total,
-        }
+            data: pageData,
+            page: _.toNumber(page),
+            perPage: totalPage,
+            total: totalRecord,
+          }
         : {
-          pageData,
-          totalRecord,
-          totalPage,
-        }
+            pageData,
+            totalRecord,
+            totalPage,
+          }
     } catch (error) {
       logger.error('Violations.getAll() error:', error)
       throw new AppError({ code: StatusCodes.INTERNAL_SERVER_ERROR, message: 'Lấy danh sách vi phạm thất bại' })
@@ -174,45 +141,26 @@ export class Violation {
    */
   getById = async (id, platform) => {
     try {
-      let [errGet, result] = await to(model.violation.getById(id, platform))
-      if (errGet) throw errGet
-
-      // let [err, getByIdCam] = await to(this.#grpcClient.makeRequest('get', { ids: { c1: result.camera } }))
-      // if (err) throw err
-
-      return result
-    } catch (error) {
-      logger.error('Violations.getById() error:', error)
-      throw new AppError({ code: StatusCodes.INTERNAL_SERVER_ERROR, message: 'Lấy thông tin vi phạm thất bại' })
-    }
-  }
-
-  /**
-   *
-   * @param {mongoose.Types.ObjectId} id
-   * @param {String} status
-   * @param {String} object
-   * @param {String} plate
-   * @param {String} owner
-   * @param {String} phone
-   * @param {String} email
-   */
-  editViolation = async (id, status, object, plate, owner, phone, email) => {
-    try {
-      let dataChange = {}
-      dataChange.plate = plate
-      dataChange.owner = owner
-      dataChange.phone = phone
-      dataChange.email = email
-      dataChange.status = _.includes(validator.statusTypes, status) ? _.indexOf(validator.statusTypes, status) : undefined
-      dataChange.object = _.includes(validator.vehicleTypes, object) ? _.indexOf(validator.vehicleTypes, object) - 1 : undefined
-      let [err, result] = await to(model.violation.editViolation(id, dataChange))
+      let [err, result] = await to(model.violation.getById(id, platform))
       if (err) throw err
 
+      try {
+        let getByIdCam = await this.#grpcClient.makeRequest('get', { ids: { c1: result.camera.id } })
+
+        let camera = Object.values(getByIdCam.cameras)
+        let dataCam = {
+          address: camera[0].address,
+          nameCam: camera[0].name,
+        }
+
+        result = { ...result, ...dataCam }
+      } catch (error) {
+        result = { ...result }
+      }
+
       return result
     } catch (error) {
-      logger.error('Violations.editViolation() error:', error)
-      throw new AppError({ code: StatusCodes.INTERNAL_SERVER_ERROR, message: 'Thay đổi thông tin vi phạm thất bại' })
+      throw new AppError({ code: StatusCodes.INTERNAL_SERVER_ERROR, message: 'Lấy thông tin vi phạm thất bại' })
     }
   }
 
@@ -234,7 +182,7 @@ export class Violation {
       let [err, violation] = await to(model.violation.getById(id))
       if (err) throw err
 
-      let vioObject = _.indexOf(validator.vehicleTypes, violation.object) - 1
+      const vioObject = _.indexOf(validator.vehicleTypes, violation.object) - 1
 
       const date = new Date(violation.vioTime)
       const getHour = date.getHours()
@@ -246,11 +194,13 @@ export class Violation {
       const vioYear = date.getFullYear()
 
       const solvingDateReport = new Date(solvingDate)
-      const solvingHour = ('0' + solvingDateReport.getHours()).slice(-2)
-      const solvingMinute = ('0' + solvingDateReport.getMinutes()).slice(-2)
-      const solvingDay = solvingDateReport.getDate()
-      const solvingMonth = solvingDateReport.getMonth() + 1
-      const solvingYear = solvingDateReport.getFullYear()
+      let solvingHour = ''
+      if (JSON.stringify(solvingDateReport) != 'null') solvingHour = ('0' + solvingDateReport.getHours()).slice(-2)
+      let solvingMinute = ''
+      if (JSON.stringify(solvingDateReport) != 'null') solvingMinute = ('0' + solvingDateReport.getMinutes()).slice(-2)
+      const solvingDay = solvingDateReport.getDate() || ''
+      const solvingMonth = solvingDateReport.getMonth() + 1 || ''
+      const solvingYear = solvingDateReport.getFullYear() || ''
 
       const doc = new PDFDocument({
         size: 'A5',
@@ -315,16 +265,16 @@ export class Violation {
         .moveDown(0.2)
         .text(
           'Vào lúc:    ' +
-          solvingHour +
-          '   giờ   ' +
-          solvingMinute +
-          '   phút' +
-          ',   ngày   ' +
-          solvingDay +
-          '   tháng   ' +
-          solvingMonth +
-          '   năm   ' +
-          solvingYear
+            solvingHour +
+            '   giờ   ' +
+            solvingMinute +
+            '   phút' +
+            ',   ngày   ' +
+            solvingDay +
+            '   tháng   ' +
+            solvingMonth +
+            '   năm   ' +
+            solvingYear
         )
         .moveDown(0.2)
         .text('Địa điểm:  ...........................................................................')
@@ -344,22 +294,6 @@ export class Violation {
     } catch (error) {
       logger.error(error)
       throw new AppError({ code: StatusCodes.INTERNAL_SERVER_ERROR, message: 'Xuất biên bản vi phạm thất bại' })
-    }
-  }
-
-  /**
-   * Delete violations
-   * @param {string|mongoose.Types.ObjectId} ids
-   */
-  delete = async (ids) => {
-    try {
-      let [errDelete] = await to(model.violation.delete(ids))
-      if (errDelete) throw errDelete
-
-      return 'Xóa vi phạm thành công'
-    } catch (error) {
-      logger.error('Violations.delete() error:', error)
-      throw new AppError({ code: StatusCodes.INTERNAL_SERVER_ERROR, message: 'Xóa vi phạm thất bại' })
     }
   }
 
@@ -390,7 +324,6 @@ export class Violation {
    * @param {Number || String} page
    * @param {Mongoose.Types.ObjectId(string)} idCam
    * @param {String} nameCam
-   * @param {Response} res
    */
   reportStatisticalExcel = async (day, timeline, page, idCam, nameCam) => {
     try {
@@ -449,6 +382,78 @@ export class Violation {
     } catch (error) {
       logger.error('Violations.getStatistical() error:', error)
       throw new AppError({ code: StatusCodes.INTERNAL_SERVER_ERROR, message: 'Xuất báo cáo thống kê thất bại' })
+    }
+  }
+
+  /**
+   *
+   * @param {mongoose.Types.ObjectId} id
+   * @param {String} status
+   * @param {String} object
+   * @param {String} plate
+   * @param {String} owner
+   * @param {String} phone
+   * @param {String} email
+   */
+  editViolation = async (id, status, object, plate, owner, phone, email) => {
+    try {
+      let dataChange = {}
+      dataChange.plate = plate
+      dataChange.owner = owner
+      dataChange.phone = phone
+      dataChange.email = email
+      dataChange.status = _.includes(validator.statusTypes, status) ? _.indexOf(validator.statusTypes, status) : undefined
+      dataChange.object = _.includes(validator.vehicleTypes, object) ? _.indexOf(validator.vehicleTypes, object) - 1 : undefined
+      let [err, result] = await to(model.violation.editViolation(id, dataChange))
+      if (err) throw err
+
+      return result
+    } catch (error) {
+      logger.error('Violations.editViolation() error:', error)
+      throw new AppError({ code: StatusCodes.INTERNAL_SERVER_ERROR, message: 'Thay đổi thông tin vi phạm thất bại' })
+    }
+  }
+
+  /**
+   * Update status
+   * @param {string[]} ids
+   * @param {('approved'|'unapproved'|'finishReport'|'finishPenal'|'expired')} action
+   */
+  updateApproval = async (ids, action) => {
+    try {
+      if (!validator.isValidStatusType(action)) {
+        throw new AppError('invalid action')
+      }
+
+      let [err, results] = await to(model.violation.updatedStatus(ids, action))
+      if (err) throw err
+
+      return action === 'approved'
+        ? 'Duyệt vi phạm thành công'
+        : action === 'finishPenal'
+        ? 'Hoàn thành xử phạt'
+        : action === 'finishReport'
+        ? 'Đã xuất biên bản'
+        : 'Bỏ duyệt vi phạm thành công'
+    } catch (error) {
+      logger.error('Violations.updateApproval() error:', error)
+      throw new AppError({ code: StatusCodes.INTERNAL_SERVER_ERROR, message: 'Thay đổi trạng thái duyệt vi phạm thất bại' })
+    }
+  }
+
+  /**
+   * Delete violations
+   * @param {string|mongoose.Types.ObjectId} ids
+   */
+  delete = async (ids) => {
+    try {
+      let [errDelete] = await to(model.violation.delete(ids))
+      if (errDelete) throw errDelete
+
+      return 'Xóa vi phạm thành công'
+    } catch (error) {
+      logger.error('Violations.delete() error:', error)
+      throw new AppError({ code: StatusCodes.INTERNAL_SERVER_ERROR, message: 'Xóa vi phạm thất bại' })
     }
   }
 }

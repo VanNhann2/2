@@ -65,21 +65,6 @@ export const violationRouter = (router) => {
     }
   })
 
-  // router.get('/violations/:id', async (req, res, next) => {
-  //   try {
-  //     const { id } = req.params
-  //     const { platform } = null
-
-  //     if (!validator.isMongoId(id)) {
-  //       throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Vi phạm không hợp lệ' })
-  //     }
-  //     const result = await app.violation.getById(id, platform)
-  //     res.json(result)
-  //   } catch (error) {
-  //     next(error)
-  //   }
-  // })
-
   router.get('/public/violations/:id', async (req, res, next) => {
     try {
       const { id } = req.params
@@ -89,7 +74,7 @@ export const violationRouter = (router) => {
         throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Vi phạm không hợp lệ' })
       }
 
-      if (_.toString(platform) !== 'mobile' || _.toString(platform) !== 'web') {
+      if (_.toString(platform) !== 'mobile') {
         throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Platform không hợp lệ' })
       }
 
@@ -138,8 +123,10 @@ export const violationRouter = (router) => {
         throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'page không hợp lệ' })
       }
 
-      if (!validator.isMongoId(idCam)) {
-        throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Vi phạm không hợp lệ' })
+      if (idCam) {
+        if (!validator.isMongoId(idCam)) {
+          throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Vi phạm không hợp lệ' })
+        }
       }
 
       const workbook = await app.violation.reportStatisticalExcel(day, timeline, page, idCam, nameCam)
@@ -148,13 +135,14 @@ export const violationRouter = (router) => {
       res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
       res.setHeader(
         'Content-Disposition',
-        `Bao_cao_thong_ke_${validator.defineTimeline(timeline)}_${timeline === 'day'
-          ? moment(day).format('DD/MM/YYYY')
-          : timeline === 'month'
+        `Bao_cao_thong_ke_${validator.defineTimeline(timeline)}_${
+          timeline === 'day'
+            ? moment(day).format('DD/MM/YYYY')
+            : timeline === 'month'
             ? moment(day).format('MM/YYYY')
             : timeline === 'week'
-              ? `${moment(day, 'YYYYMMDD').isoWeek()}_${moment(day).format('YYYY')}`
-              : moment(day).format('YYYY')
+            ? `${moment(day, 'YYYYMMDD').isoWeek()}_${moment(day).format('YYYY')}`
+            : moment(day).format('YYYY')
         }.xlsx`
       )
 
@@ -176,6 +164,37 @@ export const violationRouter = (router) => {
       }
 
       await app.violation.report(id, vioAddress, vioOwner, addressOwner, res, solvingDate)
+    } catch (error) {
+      next(error)
+    }
+  })
+
+  router.put('/violations/approved', async (req, res, next) => {
+    try {
+      const { ids } = req.body
+
+      if (!validator.isMongoIdArray(ids)) {
+        throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Id vi phạm phải là một mảng' })
+      }
+
+      const result = await app.violation.updateApproval(ids, 'approved')
+      res.json(result)
+    } catch (error) {
+      next(error)
+    }
+  })
+
+  router.put('/violations/unapproved', async (req, res, next) => {
+    try {
+      const { ids } = req.body
+
+      if (!validator.isMongoIdArray(ids)) {
+        throw new RequestError({ code: StatusCodes.BAD_REQUEST, message: 'Id vi phạm phải là một mảng' })
+      }
+
+      const result = await app.violation.updateApproval(ids, 'unapproved')
+
+      res.json(result)
     } catch (error) {
       next(error)
     }

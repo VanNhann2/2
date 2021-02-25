@@ -20,20 +20,6 @@ export class GRpcClient {
     this.#client = new (_.get(this.#proto, serviceName))(serverAddress, grpc.credentials.createInsecure())
   }
 
-  // /**
-  //  * Make a gRPC request to server
-  //  * @param {string} method
-  //  * @param {object} requestData
-  //  */
-  // getCameraById = async (requestData) => {
-  //   return new Promise((resolve, reject) => {
-  //     this.#client(requestData, (err, response) => {
-  //       if (err) reject(err)
-  //       resolve(response)
-  //     })
-  //   })
-  // }
-
   /**
    * Make a gRPC request to server
    * @param {string} method

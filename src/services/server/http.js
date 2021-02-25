@@ -52,7 +52,7 @@ export class HttpServer {
 
   // checking for routes that not exist
   #checkRouteExist = (req, res, next) => {
-    if (!req.route) return next({ status: 404, messages: 'Endpoint not found' })
+    if (!req.route) return next({ status: 404, message: 'Endpoint not found' })
     next()
   }
 
@@ -63,7 +63,7 @@ export class HttpServer {
         logger.error(`HTTP ${req.method} ${req.originalUrl} ${err.code}: ${err.message}`)
       }
       res.status(err.code || StatusCodes.INTERNAL_SERVER_ERROR)
-      res.json({ messages: err.message, params: err.params })
+      res.json({ message: err.message, params: err.params })
     }
     next()
   }
